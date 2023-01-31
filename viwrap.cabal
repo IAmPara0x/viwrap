@@ -1,0 +1,108 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           viwrap
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/viwrap#readme>
+homepage:       https://github.com/githubuser/viwrap#readme
+bug-reports:    https://github.com/githubuser/viwrap/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2023 Author name here
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/viwrap
+
+flag prod
+  manual: True
+  default: False
+
+library
+  exposed-modules:
+      Viwrap.Pty
+  other-modules:
+      Paths_viwrap
+  hs-source-dirs:
+      src
+  default-extensions:
+      BlockArguments
+      DerivingStrategies
+      GADTs
+      ImportQualifiedPost
+      OverloadedStrings
+      RecordWildCards
+  ghc-options: -fprint-explicit-foralls -fprint-explicit-kinds -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wunused-foralls -Wmissing-local-signatures
+  build-depends:
+      base >=4.7 && <5
+    , bytestring
+    , freer-simple
+    , process
+    , unagi-chan
+    , unix
+    , utf8-string
+  default-language: GHC2021
+  if flag(prod)
+    ghc-options: -Werror -O3
+  else
+    ghc-options: -Wwarn
+
+executable viwrap-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_viwrap
+  hs-source-dirs:
+      app
+  default-extensions:
+      BlockArguments
+      DerivingStrategies
+      GADTs
+      ImportQualifiedPost
+      OverloadedStrings
+      RecordWildCards
+  ghc-options: -fprint-explicit-foralls -fprint-explicit-kinds -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wunused-foralls -Wmissing-local-signatures -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , bytestring
+    , freer-simple
+    , process
+    , unagi-chan
+    , unix
+    , utf8-string
+    , viwrap
+  default-language: GHC2021
+
+test-suite viwrap-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_viwrap
+  hs-source-dirs:
+      test
+  default-extensions:
+      BlockArguments
+      DerivingStrategies
+      GADTs
+      ImportQualifiedPost
+      OverloadedStrings
+      RecordWildCards
+  ghc-options: -fprint-explicit-foralls -fprint-explicit-kinds -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wunused-foralls -Wmissing-local-signatures -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , bytestring
+    , freer-simple
+    , process
+    , unagi-chan
+    , unix
+    , utf8-string
+    , viwrap
+  default-language: GHC2021
