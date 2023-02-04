@@ -29,24 +29,33 @@ flag prod
 
 library
   exposed-modules:
+      Viwrap
       Viwrap.Pty
+      Viwrap.Pty.Handler
   other-modules:
       Paths_viwrap
   hs-source-dirs:
       src
   default-extensions:
+      AllowAmbiguousTypes
       BlockArguments
+      DataKinds
       DerivingStrategies
       GADTs
       ImportQualifiedPost
+      LambdaCase
       OverloadedStrings
       RecordWildCards
+      ScopedTypeVariables
+      TemplateHaskell
+      TypeFamilies
   ghc-options: -fprint-explicit-foralls -fprint-explicit-kinds -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wunused-foralls -Wmissing-local-signatures
   build-depends:
       base >=4.7 && <5
     , bytestring
     , freer-simple
     , process
+    , transformers
     , unagi-chan
     , unix
     , utf8-string
@@ -63,18 +72,25 @@ executable viwrap-exe
   hs-source-dirs:
       app
   default-extensions:
+      AllowAmbiguousTypes
       BlockArguments
+      DataKinds
       DerivingStrategies
       GADTs
       ImportQualifiedPost
+      LambdaCase
       OverloadedStrings
       RecordWildCards
+      ScopedTypeVariables
+      TemplateHaskell
+      TypeFamilies
   ghc-options: -fprint-explicit-foralls -fprint-explicit-kinds -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wunused-foralls -Wmissing-local-signatures -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , bytestring
     , freer-simple
     , process
+    , transformers
     , unagi-chan
     , unix
     , utf8-string
@@ -89,18 +105,25 @@ test-suite viwrap-test
   hs-source-dirs:
       test
   default-extensions:
+      AllowAmbiguousTypes
       BlockArguments
+      DataKinds
       DerivingStrategies
       GADTs
       ImportQualifiedPost
+      LambdaCase
       OverloadedStrings
       RecordWildCards
+      ScopedTypeVariables
+      TemplateHaskell
+      TypeFamilies
   ghc-options: -fprint-explicit-foralls -fprint-explicit-kinds -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wunused-foralls -Wmissing-local-signatures -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , bytestring
     , freer-simple
     , process
+    , transformers
     , unagi-chan
     , unix
     , utf8-string

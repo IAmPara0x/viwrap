@@ -30,17 +30,24 @@ dependencies:
 - bytestring
 - freer-simple
 - process
+- transformers
 - unagi-chan
 - unix
 - utf8-string
 
 default-extensions:
+- AllowAmbiguousTypes
 - BlockArguments
+- DataKinds
 - DerivingStrategies 
 - GADTs
 - ImportQualifiedPost
+- LambdaCase
 - OverloadedStrings
 - RecordWildCards
+- ScopedTypeVariables
+- TemplateHaskell
+- TypeFamilies
 
 ghc-options:
 - -fprint-explicit-foralls

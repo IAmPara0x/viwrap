@@ -1,61 +1,62 @@
-module Viwrap.Pty (run, masterRead, slaveRead) where
+module Viwrap.Pty ( Cmd
+                  , Env(..)
+                  , FdMaster
+                  , FdSlave
+                  , HMaster
+                  , HSlave
+                  , Logger(..)
+                  , PtyAct(..)
+                  , logM
+                  , logS
+                  , openPty
+                  , fdClose
+                  , hRead
+                  , hWrite
+                  , fdToHandle
+                  , forkAndExecCmd
+                  , getTerminalAttr
+                  , setTerminalAttr
+                  ) where
 
-import Control.Monad (when, void)
-import System.Process (createProcess,shell, CreateProcess (..), StdStream (..), waitForProcess, ProcessHandle)
-import System.Posix.Terminal
-import System.Posix.IO (closeFd, fdToHandle,dupTo,stdInput,stdOutput,stdError)
-import System.Posix.IO.ByteString (fdRead, fdWrite)
-import Text.Printf (printf)
-import System.Posix (Fd, ByteCount)
-import Control.Concurrent (threadDelay)
+import Control.Monad.Freer (Eff, Member, send)
+import Control.Monad.Freer.TH (makeEffect)
+import Data.ByteString (ByteString)
+import System.Process (ProcessHandle)
+import System.Posix (Fd)
+import System.Posix.Terminal (TerminalAttributes, TerminalState)
+import System.IO (Handle)
 
-buffer_size :: ByteCount
-buffer_size = 2048
+type HMaster = Handle
+type HSlave = Handle
 
-one_sec :: Int
-one_sec = 1000000
+type FdMaster = Fd
+type FdSlave = Fd
 
-run :: IO ()
-run = do
-    (masterFd, slaveFd) <- openPseudoTerminal
-    getSlaveTerminalName masterFd >>= print
-    getTerminalName masterFd >>= printf "master terminal name: %s\n"
-    getTerminalName slaveFd >>= printf "slave terminal name: %s\n"
-    getControllingTerminalName >>= printf "controlling terminal name: %s\n"
+type Cmd = String
 
+-- TODO: Is there a way to unite the API to use either Fd or Handle insread of using both?
+data PtyAct a where
+     OpenPty :: PtyAct (FdMaster, FdSlave)
+     FdClose :: Fd -> PtyAct ()
+     HRead :: Handle -> PtyAct (Maybe ByteString)
+     HWrite :: Handle -> ByteString -> PtyAct ()
+     FdToHandle :: Fd -> PtyAct Handle
+     ForkAndExecCmd :: HSlave -> PtyAct ProcessHandle
+     GetTerminalAttr :: Fd -> PtyAct TerminalAttributes
+     SetTerminalAttr :: Fd -> TerminalAttributes -> TerminalState -> PtyAct ()
+makeEffect ''PtyAct
 
-    ph <- forkProcess slaveFd
-    masterRead masterFd
+data Logger a where
+     LogM :: String -> [String] -> Logger ()
 
-    void (fdWrite masterFd "this is slaveFd\n")
-    waitForProcess ph
-    masterRead masterFd
+makeEffect ''Logger
 
-    -- slaveRead slaveFd
+logS :: forall a b effs. (Show a, Show b, Member Logger effs) => a -> [b] -> Eff effs ()
+logS a = send . LogM (show a) . map show
 
-    mapM_ closeFd [masterFd]
-
-forkProcess :: Fd -> IO ProcessHandle
-forkProcess slaveFd = do
-    sHandle <- fdToHandle slaveFd
-    (_,_,_,ph) <- createProcess $ (shell "/tmp/hello.py")
-                    { delegate_ctlc = True
-                    , std_err = CreatePipe
-                    , std_out = UseHandle sHandle
-                    , std_in = UseHandle sHandle
-                    }
-    return ph
-
-slaveRead :: Fd -> IO ()
-slaveRead slaveFd = do
-          threadDelay one_sec
-          (content, count) <- fdRead slaveFd buffer_size
-          when (count == 0) (slaveRead slaveFd)
-          printf "slave content: %s\n" content
-
-masterRead :: Fd -> IO ()
-masterRead masterFd = do
-           threadDelay one_sec
-           (content, count) <- fdRead masterFd buffer_size
-           when (count == 0) (masterRead masterFd)
-           printf "master content: %s\n" content
+data Env = Env { envCmd :: Cmd
+               , envCmdArgs :: [String]
+               , envPollingRate :: Int
+               , envBufferSize :: Int
+               , logFile :: FilePath
+               }

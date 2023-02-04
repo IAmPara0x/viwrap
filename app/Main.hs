@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Viwrap.Pty (run)
+import Viwrap
 
 main :: IO ()
-main = run
+main = launch
