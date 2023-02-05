@@ -163,7 +163,7 @@ uncommon-vibe-be/dist-newstyle
 Pods
 *.xcuserstate
 
-dist-newstyle
+dist-newstyle/
 temp/
 output/
 .shake/
