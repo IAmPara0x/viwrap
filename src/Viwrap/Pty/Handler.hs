@@ -74,7 +74,7 @@ openPtyIO = do
 
   -- let sigCHLDHandler :: Handler
   --     sigCHLDHandler = Catch $ void (swapMVar isChildDead True)
-                     
+
   -- _ <- sendM (installHandler Signals.sigCHLD sigCHLDHandler Nothing)
 
   logOpenPty [printf "Master: FD=%d, Slave: FD=%d" (toInteger masterFd) (toInteger slaveFd)]
@@ -150,11 +150,11 @@ hReadIO handle = do
   -- isDead <- get @IsDead >>= sendM . readMVar
 
   if False
-     then logRead ["Recieved SIGCHLD, aborting to poll"] >> return Nothing
-     else do
-        logM "FdRead" [printf "reading fd: %s" $ show handle]
-        Env { envBufferSize, envPollingRate } <- ask
-        sendM (timeout envPollingRate $ BS.hGetSome handle envBufferSize)
+    then logRead ["Recieved SIGCHLD, aborting to poll"] >> return Nothing
+    else do
+      logM "FdRead" [printf "reading fd: %s" $ show handle]
+      Env { envBufferSize, envPollingRate } <- ask
+      sendM (timeout envPollingRate $ BS.hGetSome handle envBufferSize)
 
 hWriteIO
   :: forall effs

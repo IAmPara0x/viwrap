@@ -47,7 +47,7 @@ pollMasterFd ph hMaster = do
                   (\x -> if BS.null x then logPollM ["recieved null."] else putStrBS x)
                   mcontent
 
-            maybe (return ())                           (hWrite hMaster) minput
+            maybe (return ()) (hWrite hMaster) minput
             pollMasterFd ph hMaster
   poll
 
@@ -78,7 +78,7 @@ app = do
 
   uninstallTerminalModes fdStdin [EnableEcho, ProcessInput] Immediately
 
-  ph        <- forkAndExecCmd hSlave
+  ph <- forkAndExecCmd hSlave
 
 
   () <- pollMasterFd ph hMaster
@@ -112,8 +112,4 @@ uninstallTerminalModes fd modes state = do
   setTerminalAttr fd newTermAttr state
 
 launch :: IO ()
-launch = runPtyActIO app
-        & runTerminalIO
-        & runHandleActIO
-        & runLoggerIO
-        & runReader renv & runM
+launch = runPtyActIO app & runTerminalIO & runHandleActIO & runLoggerIO & runReader renv & runM
