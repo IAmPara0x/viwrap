@@ -5,21 +5,24 @@ module Viwrap.Pty
   , FdSlave
   , HMaster
   , HSlave
+  , HandleAct (..)
   , Logger (..)
   , PtyAct (..)
+  , Terminal (..)
   , fdClose
   , fdToHandle
   , forkAndExecCmd
+  , getStderr
+  , getStdin
+  , getStdout
   , getTerminalAttr
   , hRead
   , hWrite
   , logM
-  , logS
   , openPty
   , setTerminalAttr
   ) where
 
-import Control.Monad.Freer    (Eff, Member, send)
 import Control.Monad.Freer.TH (makeEffect)
 import Data.ByteString        (ByteString)
 import System.IO              (Handle)
@@ -38,22 +41,31 @@ type Cmd = String
 -- TODO: Is there a way to unite the API to use either Fd or Handle insread of using both?
 data PtyAct a where
   OpenPty :: PtyAct (FdMaster, FdSlave)
-  FdClose :: Fd -> PtyAct ()
-  HRead :: Handle -> PtyAct (Maybe ByteString)
-  HWrite :: Handle -> ByteString -> PtyAct ()
   FdToHandle :: Fd -> PtyAct Handle
   ForkAndExecCmd :: HSlave -> PtyAct ProcessHandle
+  FdClose :: Fd -> PtyAct ()
   GetTerminalAttr :: Fd -> PtyAct TerminalAttributes
   SetTerminalAttr :: Fd -> TerminalAttributes -> TerminalState -> PtyAct ()
+
 makeEffect ''PtyAct
+
+data HandleAct a where
+  HRead :: Handle -> HandleAct (Maybe ByteString)
+  HWrite :: Handle -> ByteString -> HandleAct ()
+
+makeEffect ''HandleAct
+
+data Terminal a where
+  GetStdin :: Terminal (Fd, Handle)
+  GetStdout :: Terminal (Fd, Handle)
+  GetStderr :: Terminal (Fd, Handle)
+
+makeEffect ''Terminal
 
 data Logger a where
   LogM :: String -> [String] -> Logger ()
 
 makeEffect ''Logger
-
-logS :: forall a b effs . (Show a, Show b, Member Logger effs) => a -> [b] -> Eff effs ()
-logS a = send . LogM (show a) . map show
 
 data Env
   = Env

@@ -1,0 +1,123 @@
+[OpenPty] opening pty...
+[OpenPty] Master: FD=23, Slave: FD=24
+[FdToHandle] convert fd 23 to handle
+[FdToHandle] convert fd 24 to handle
+[GetTerminalAttr] Terminal attributes of Fd: 0 is: Terminal Modes: ["MapCRtoLF","ProcessOutput","ReadEnable","EnableEcho","EchoErase","EchoKill","ExtendedFunctions","KeyboardInterrupts","NoFlushOnInterrupt"]
+[SetTerminalAttr] Setting terminal attributes: Terminal Modes: ["MapCRtoLF","ProcessOutput","ReadEnable","EchoErase","EchoKill","ExtendedFunctions","KeyboardInterrupts","NoFlushOnInterrupt"], for fd: 0
+[ForkAndExecCmd] starting process by executing python cmd
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[putStrBS] writting ""Python 3.10.8 (main, Nov  1 2022, 14:18:21) [GCC 12.2.0] on linux\r\nType \"help\", \"copyright\", \"credits\" or \"license\" for more information.\r\n"" of 139 bytes to stdout
+[FdWrite] writing "Python 3.10.8 (main, Nov  1 2022, 14:18:21) [GCC 12.2.0] on linux\r\nType \"help\", \"copyright\", \"credits\" or \"license\" for more information.\r\n" to {handle: <stdout>}
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[putStrBS] writting "">>> "" of 4 bytes to stdout
+[FdWrite] writing ">>> " to {handle: <stdout>}
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdWrite] writing "\ESC[A" to {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[putStrBS] writting ""quit()"" of 6 bytes to stdout
+[FdWrite] writing "quit()" to {handle: <stdout>}
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[FdWrite] writing "\n" to {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[putStrBS] writting ""\r\n"" of 2 bytes to stdout
+[FdWrite] writing "\r\n" to {handle: <stdout>}
+[FdRead] reading fd: {handle: <file descriptor: 23>}
+[FdRead] reading fd: {handle: <stdin>}
+[PollMaster] masterFd read timeout.
+[PollMaster] slave process exited with code: ExitSuccess
+[FdClose] closing fd: 23
