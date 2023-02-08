@@ -16,7 +16,14 @@ import System.Process             qualified as Process
 import System.Process             (ProcessHandle)
 import Text.Printf                (printf)
 import Viwrap.Pty
-import Viwrap.Pty.Handler         (runHandleActIO, runLoggerIO, runPtyActIO, runTerminalIO)
+import Viwrap.Pty.Handler
+  ( runHandleActIO
+  , runLoggerIO
+  , runLoggerUnit
+  , runPtyActIO
+  , runTerminalIO
+  )
+import Viwrap.Pty.TermSize        (getTermSize, setTermSize)
 
 
 type ViwrapEff effs = Members '[HandleAct , Logger , PtyAct , Terminal] effs
@@ -65,8 +72,8 @@ putStrBS content = do
 app :: (ViwrapEff effs, LastMember IO effs) => Eff effs ()
 app = do
 
-  (fdStdin, hStdin ) <- getStdin
-  (_      , hStdout) <- getStdout
+  (fdStdin , hStdin ) <- getStdin
+  (fdStdout, hStdout) <- getStdout
 
   sendM (hSetBuffering hStdin NoBuffering)
   sendM (hSetBuffering hStdout NoBuffering)
@@ -78,8 +85,12 @@ app = do
 
   uninstallTerminalModes fdStdin [EnableEcho, ProcessInput] Immediately
 
+
   ph <- forkAndExecCmd hSlave
 
+  sendM (setTermSize fdStdin fdMaster)
+  termSize <- sendM $ getTermSize fdMaster
+  logM "APP" [show termSize]
 
   () <- pollMasterFd ph hMaster
 
@@ -94,7 +105,7 @@ installTerminalModes
   -> Eff effs ()
 installTerminalModes fd modes state = do
   termAttr <- getTerminalAttr fd
-  let newTermAttr = foldr (flip Terminal.withMode) termAttr modes
+  let newTermAttr = foldl Terminal.withMode termAttr modes
 
   setTerminalAttr fd newTermAttr state
 
@@ -107,7 +118,7 @@ uninstallTerminalModes
   -> Eff effs ()
 uninstallTerminalModes fd modes state = do
   termAttr <- getTerminalAttr fd
-  let newTermAttr = foldr (flip Terminal.withoutMode) termAttr modes
+  let newTermAttr = foldl Terminal.withoutMode termAttr modes
 
   setTerminalAttr fd newTermAttr state
 

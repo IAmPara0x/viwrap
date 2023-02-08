@@ -6,7 +6,6 @@ module Viwrap.Pty.Handler
   , runTerminalIO
   ) where
 
-
 import Control.Monad.Freer        (Eff, LastMember, Members, interpret, sendM)
 import Control.Monad.Freer.Reader (Reader, ask)
 
@@ -23,7 +22,6 @@ import System.Timeout             (timeout)
 import Text.Printf                (printf)
 
 import Viwrap.Pty
-
 
 -- Handlers for logger
 runLoggerUnit :: forall a effs . Eff (Logger ': effs) a -> Eff effs a
@@ -42,7 +40,6 @@ runLoggerIO = interpret $ \case
   LogM x [] -> do
     Env { logFile } <- ask
     sendM $ appendFile logFile $ printf "[%s]\n" x
-
 
 -- handler for 'PtyAct'
 runPtyActIO
@@ -68,15 +65,6 @@ openPtyIO = do
 
   (masterFd, slaveFd) <- sendM Terminal.openPseudoTerminal
 
-  -- isChildDead  <- get
-  -- void (sendM $ swapMVar isChildDead False)
-  -- put isChildDead
-
-  -- let sigCHLDHandler :: Handler
-  --     sigCHLDHandler = Catch $ void (swapMVar isChildDead True)
-
-  -- _ <- sendM (installHandler Signals.sigCHLD sigCHLDHandler Nothing)
-
   logOpenPty [printf "Master: FD=%d, Slave: FD=%d" (toInteger masterFd) (toInteger slaveFd)]
   return (masterFd, slaveFd)
 
@@ -96,6 +84,7 @@ forkAndExecCmdIO sHandle = do
     , std_err       = UseHandle sHandle
     , std_out       = UseHandle sHandle
     , std_in        = UseHandle sHandle
+    -- , new_session   = True
     }
   return ph
 
@@ -147,14 +136,9 @@ hReadIO handle = do
 
   let logRead = logM "HRead"
 
-  -- isDead <- get @IsDead >>= sendM . readMVar
-
-  if False
-    then logRead ["Recieved SIGCHLD, aborting to poll"] >> return Nothing
-    else do
-      logM "FdRead" [printf "reading fd: %s" $ show handle]
-      Env { envBufferSize, envPollingRate } <- ask
-      sendM (timeout envPollingRate $ BS.hGetSome handle envBufferSize)
+  logRead [printf "reading fd: %s" $ show handle]
+  Env { envBufferSize, envPollingRate } <- ask
+  sendM (timeout envPollingRate $ BS.hGetSome handle envBufferSize)
 
 hWriteIO
   :: forall effs
