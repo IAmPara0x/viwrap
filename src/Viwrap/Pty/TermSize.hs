@@ -6,18 +6,16 @@ module Viwrap.Pty.TermSize
   , setTermSize
   ) where
 
+import Control.Monad         (void)
 import Foreign.C.Types       (CInt (..), CUShort)
 import Foreign.Marshal.Alloc (free, malloc)
-import Foreign.Ptr           (Ptr, nullPtr)
+import Foreign.Ptr           (Ptr)
 import Foreign.Storable      (Storable (..))
 import System.Posix          (Fd (Fd))
 import Text.Printf           (printf)
 
 pattern TIOCGWINSZ :: CInt
 pattern TIOCGWINSZ = (21523 :: CInt)
-
-pattern TIOCNOTTY :: CInt
-pattern TIOCNOTTY = (21538 :: CInt)
 
 pattern TIOCSCTTY :: CInt
 pattern TIOCSCTTY = (21524 :: CInt)
@@ -74,7 +72,8 @@ setTermSize :: Fd -> Fd -> IO ()
 setTermSize (Fd fromFd) (Fd toFd) = do
   ptr_ws <- (malloc @CWinsize)
 
-  _      <- c_ioctl fromFd TIOCGWINSZ ptr_ws
+  void $ c_ioctl fromFd TIOCGWINSZ ptr_ws
 
-  code   <- c_ioctl toFd TIOCSCTTY ptr_ws
-  print code
+  void $ c_ioctl toFd TIOCSCTTY ptr_ws
+
+  free ptr_ws

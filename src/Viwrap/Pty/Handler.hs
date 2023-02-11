@@ -6,6 +6,9 @@ module Viwrap.Pty.Handler
   , runTerminalIO
   ) where
 
+import Control.Concurrent.Async   (Async, async, cancel, poll, waitAny)
+import Control.Exception          (SomeException, throwIO)
+import Control.Monad              (void, (<=<))
 import Control.Monad.Freer        (Eff, LastMember, Members, interpret, sendM)
 import Control.Monad.Freer.Reader (Reader, ask)
 
@@ -18,10 +21,13 @@ import System.Posix.Terminal      qualified as Terminal
 import System.Posix.Terminal      (TerminalAttributes, TerminalMode (..), TerminalState)
 import System.Process             qualified as Process
 import System.Process             (CreateProcess (..), ProcessHandle, StdStream (..))
-import System.Timeout             (timeout)
+import System.Timeout             qualified as IO
 import Text.Printf                (printf)
 
-import Viwrap.Pty
+import Viwrap.Pty                 hiding (getTermSize, setTermSize)
+
+
+import Viwrap.Pty.TermSize
 
 -- Handlers for logger
 runLoggerUnit :: forall a effs . Eff (Logger ': effs) a -> Eff effs a
@@ -51,10 +57,12 @@ runPtyActIO = interpret $ \case
   OpenPty -> openPtyIO
   FdToHandle fd ->
     logM "FdToHandle" [printf "convert fd %d to handle" (toInteger fd)] >> sendM (IO.fdToHandle fd)
-  FdClose         fd                        -> fdCloseIO fd
-  ForkAndExecCmd  handle                    -> forkAndExecCmdIO handle
-  GetTerminalAttr handle                    -> getTerminalAttrIO handle
-  SetTerminalAttr handle termAttr termState -> setTerminalAttrIO handle termAttr termState
+  FdClose         fd                    -> fdCloseIO fd
+  ForkAndExecCmd  fd                    -> forkAndExecCmdIO fd
+  GetTerminalAttr fd                    -> getTerminalAttrIO fd
+  SetTerminalAttr fd termAttr termState -> setTerminalAttrIO fd termAttr termState
+  GetTermSize fd                        -> getTermSizeIO fd
+  SetTermSize fdFrom fdTo               -> setTermSizeIO fdFrom fdTo
 
 openPtyIO
   :: forall effs . (Members '[Logger] effs, LastMember IO effs) => Eff effs (FdMaster, FdSlave)
@@ -79,12 +87,11 @@ forkAndExecCmdIO
 forkAndExecCmdIO sHandle = do
   Env { envCmd } <- ask
   logM "ForkAndExecCmd" [printf "starting process by executing %s cmd" envCmd]
-  (_, _, _, ph) <- sendM $ Process.createProcess_ "slave process" $ (Process.shell envCmd)
+  (_, _, _, ph) <- sendM $ Process.createProcess_ "slave process" $ (Process.proc envCmd [])
     { delegate_ctlc = True
     , std_err       = UseHandle sHandle
     , std_out       = UseHandle sHandle
     , std_in        = UseHandle sHandle
-    -- , new_session   = True
     }
   return ph
 
@@ -97,7 +104,7 @@ getTerminalAttrIO fd = do
 
   termAttr <- sendM (Terminal.getTerminalAttributes fd)
   logM "GetTerminalAttr"
-       [printf "Terminal attributes of Fd: %d is: %s" (toInteger fd) (showTerminalModes termAttr)]
+       [printf "FD: %s, Terminal Attributes: %s" (show fd) (showTerminalModes termAttr)]
   return termAttr
 
 
@@ -117,6 +124,21 @@ setTerminalAttrIO fd termAttr termState = do
     ]
   sendM (Terminal.setTerminalAttributes fd termAttr termState)
 
+getTermSizeIO
+  :: forall effs . (Members '[Logger] effs, LastMember IO effs) => Fd -> Eff effs TermSize
+getTermSizeIO fd = do
+  size <- sendM (getTermSize fd)
+  logM "GetTermSize" [printf "FD: %s, TermSize: %s" (show fd) (show size)]
+  return size
+
+setTermSizeIO
+  :: forall effs . (Members '[Logger] effs, LastMember IO effs) => Fd -> Fd -> Eff effs ()
+setTermSizeIO fdFrom fdTo = do
+  sendM (setTermSize fdFrom fdTo)
+  newSize <- sendM $ getTermSize fdTo
+  logM "SetTermSize" [printf "FD: %s, New TermSize: %s" (show fdTo) (show newSize)]
+
+
 -- Hanlder for 'HandleAct'
 runHandleActIO
   :: forall a effs
@@ -124,21 +146,39 @@ runHandleActIO
   => Eff (HandleAct ': effs) a
   -> Eff effs a
 runHandleActIO = interpret $ \case
-  HRead handle          -> hReadIO handle
-  HWrite handle content -> hWriteIO handle content
+  Pselect handles timeout -> pselectIO handles timeout
+  HWrite  handle  content -> hWriteIO handle content
 
-hReadIO
+pselectIO
   :: forall effs
    . (Members '[Logger , Reader Env] effs, LastMember IO effs)
-  => Handle
-  -> Eff effs (Maybe ByteString)
-hReadIO handle = do
+  => [Handle]
+  -> Timeout
+  -> Eff effs [Maybe ByteString]
+pselectIO handles timeout = do
 
-  let logRead = logM "HRead"
-
-  logRead [printf "reading fd: %s" $ show handle]
   Env { envBufferSize, envPollingRate } <- ask
-  sendM (timeout envPollingRate $ BS.hGetSome handle envBufferSize)
+
+  let asyncReader :: Handle -> IO (Async (Maybe ByteString))
+      asyncReader handle = async case timeout of
+        Immediately -> Just <$> BS.hGetNonBlocking handle envBufferSize
+        Infinite    -> Just <$> reader handle
+        Wait        -> IO.timeout envPollingRate $ reader handle
+
+      reader :: Handle -> IO ByteString
+      reader handle = BS.hGetSome handle envBufferSize
+
+      f :: Maybe (Either SomeException (Maybe ByteString)) -> IO (Maybe ByteString)
+      f Nothing  = return Nothing
+      f (Just r) = either throwIO return r
+
+  sendM do
+    readers <- mapM asyncReader handles
+    void $ waitAny readers
+    results <- mapM (f <=< poll) readers
+    mapM_ cancel readers
+    return results
+
 
 hWriteIO
   :: forall effs
@@ -153,7 +193,7 @@ hWriteIO handle content = do
 
 -- Handler for 'Terminal'
 runTerminalIO :: forall a effs . Eff (Terminal ': effs) a -> Eff effs a
-runTerminalIO = interpret $ \case
+runTerminalIO = interpret \case
   GetStdin  -> return (IO.stdInput, stdin)
   GetStdout -> return (IO.stdOutput, stdout)
   GetStderr -> return (IO.stdError, stderr)

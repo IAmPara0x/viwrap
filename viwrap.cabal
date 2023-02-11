@@ -33,6 +33,7 @@ library
       Viwrap.Pty
       Viwrap.Pty.Handler
       Viwrap.Pty.TermSize
+      Viwrap.Pty.Utils
   other-modules:
       Paths_viwrap
   hs-source-dirs:
@@ -52,7 +53,8 @@ library
       TypeFamilies
   ghc-options: -fprint-explicit-foralls -fprint-explicit-kinds -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wunused-foralls -Wmissing-local-signatures
   build-depends:
-      base >=4.7 && <5
+      async
+    , base >=4.7 && <5
     , bytestring
     , freer-simple
     , process
@@ -87,7 +89,8 @@ executable viwrap-exe
       TypeFamilies
   ghc-options: -fprint-explicit-foralls -fprint-explicit-kinds -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wunused-foralls -Wmissing-local-signatures -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      async
+    , base >=4.7 && <5
     , bytestring
     , freer-simple
     , process
@@ -120,7 +123,8 @@ test-suite viwrap-test
       TypeFamilies
   ghc-options: -fprint-explicit-foralls -fprint-explicit-kinds -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wunused-foralls -Wmissing-local-signatures -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      async
+    , base >=4.7 && <5
     , bytestring
     , freer-simple
     , process

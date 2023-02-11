@@ -2,16 +2,14 @@ module Viwrap
   ( launch
   ) where
 
-import Control.Monad.Freer        (Eff, LastMember, Members, runM, sendM)
+import Control.Monad.Freer        (Eff, LastMember, runM, sendM)
 import Control.Monad.Freer.Reader (runReader)
-import Data.ByteString            (ByteString)
-import Data.ByteString            qualified as BS
 import Data.Function              ((&))
 
+import GHC.IO.Handle              qualified as IO
 import System.IO                  (BufferMode (..), hSetBuffering)
-import System.Posix               (Fd)
 import System.Posix.Terminal      qualified as Terminal
-import System.Posix.Terminal      (TerminalMode (..), TerminalState (..))
+import System.Posix.Terminal      (TerminalMode (..))
 import System.Process             qualified as Process
 import System.Process             (ProcessHandle)
 import Text.Printf                (printf)
@@ -23,104 +21,68 @@ import Viwrap.Pty.Handler
   , runPtyActIO
   , runTerminalIO
   )
-import Viwrap.Pty.TermSize        (getTermSize, setTermSize)
+import Viwrap.Pty.Utils           (uninstallTerminalModes)
 
-
-type ViwrapEff effs = Members '[HandleAct , Logger , PtyAct , Terminal] effs
 
 renv :: Env
-renv = Env { envCmd         = "python"
+renv = Env { envCmd         = "racket"
            , envCmdArgs     = []
            , envPollingRate = 10000
            , envBufferSize  = 2048
            , logFile        = "log.txt"
+           , childDied      = False
            }
 
 pollMasterFd :: (ViwrapEff effs, LastMember IO effs) => ProcessHandle -> HMaster -> Eff effs ()
 pollMasterFd ph hMaster = do
 
   let logPollM = logM "PollMaster"
-  stdin <- snd <$> getStdin
+  stdin  <- snd <$> getStdin
+  stdout <- snd <$> getStdout
 
   let poll = do
         mExitCode <- sendM (Process.getProcessExitCode ph)
+
         case mExitCode of
           (Just exitCode) -> logPollM [printf "slave process exited with code: %s" $ show exitCode]
           Nothing         -> do
-            mcontent <- hRead hMaster
-            minput   <- hRead stdin
 
-            maybe (logPollM ["masterFd read timeout."])
-                  (\x -> if BS.null x then logPollM ["recieved null."] else putStrBS x)
-                  mcontent
+            results <- pselect [hMaster, stdin] Wait
 
-            maybe (return ()) (hWrite hMaster) minput
+            let [mMasterContent, mStdinContent] = results
+
+            maybe (return ()) (hWrite stdout)  mMasterContent
+            maybe (return ()) (hWrite hMaster) mStdinContent
+
             pollMasterFd ph hMaster
   poll
-
-
-putStrBS :: ViwrapEff effs => ByteString -> Eff effs ()
-putStrBS content = do
-  let logPutStr = logM "putStrBS"
-
-  stdout <- snd <$> getStdout
-  logPutStr [printf "writting \"%s\" of %d bytes to stdout" (show content) (BS.length content)]
-
-  hWrite stdout content
 
 
 app :: (ViwrapEff effs, LastMember IO effs) => Eff effs ()
 app = do
 
-  (fdStdin , hStdin ) <- getStdin
-  (fdStdout, hStdout) <- getStdout
+  (fdStdin, hStdin ) <- getStdin
+  (_      , hStdout) <- getStdout
 
   sendM (hSetBuffering hStdin NoBuffering)
   sendM (hSetBuffering hStdout NoBuffering)
 
   (fdMaster, fdSlave) <- openPty
+  (hMaster , hSlave ) <- (,) <$> fdToHandle fdMaster <*> fdToHandle fdSlave
 
-  hMaster             <- fdToHandle fdMaster
-  hSlave              <- fdToHandle fdSlave
+  setTermSize fdStdin fdMaster
 
-  uninstallTerminalModes fdStdin [EnableEcho, ProcessInput] Immediately
+  ph             <- forkAndExecCmd hSlave
 
+  masterTermAttr <- getTerminalAttr fdMaster
+  setTerminalAttr fdStdin masterTermAttr Terminal.Immediately
+  uninstallTerminalModes fdStdin [EnableEcho, ProcessInput] Terminal.Immediately
 
-  ph <- forkAndExecCmd hSlave
-
-  sendM (setTermSize fdStdin fdMaster)
-  termSize <- sendM $ getTermSize fdMaster
-  logM "APP" [show termSize]
 
   () <- pollMasterFd ph hMaster
 
-  fdClose fdMaster
-
-installTerminalModes
-  :: forall effs
-   . (Members '[Logger , PtyAct] effs)
-  => Fd
-  -> [TerminalMode]
-  -> TerminalState
-  -> Eff effs ()
-installTerminalModes fd modes state = do
-  termAttr <- getTerminalAttr fd
-  let newTermAttr = foldl Terminal.withMode termAttr modes
-
-  setTerminalAttr fd newTermAttr state
-
-uninstallTerminalModes
-  :: forall effs
-   . (Members '[Logger , PtyAct] effs)
-  => Fd
-  -> [TerminalMode]
-  -> TerminalState
-  -> Eff effs ()
-uninstallTerminalModes fd modes state = do
-  termAttr <- getTerminalAttr fd
-  let newTermAttr = foldl Terminal.withoutMode termAttr modes
-
-  setTerminalAttr fd newTermAttr state
+  sendM (IO.hClose hSlave)
+  sendM (IO.hClose hMaster)
 
 launch :: IO ()
-launch = runPtyActIO app & runTerminalIO & runHandleActIO & runLoggerIO & runReader renv & runM
+launch = runPtyActIO app & runTerminalIO & runHandleActIO & runLoggerUnit & runReader renv & runM

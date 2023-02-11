@@ -26,6 +26,7 @@ flags:
     default: False
 
 dependencies:
+- async
 - base >= 4.7 && < 5
 - bytestring
 - freer-simple
