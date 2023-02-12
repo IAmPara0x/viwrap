@@ -6,8 +6,9 @@ import Control.Monad.Freer        (Eff, LastMember, runM, sendM)
 import Control.Monad.Freer.Reader (runReader)
 import Data.Function              ((&))
 
-import GHC.IO.Handle              qualified as IO
-import System.IO                  (BufferMode (..), hSetBuffering)
+import System.Exit                (ExitCode)
+import System.IO                  qualified as IO
+import System.IO                  (BufferMode (..), Handle, hSetBuffering)
 import System.Posix.Terminal      qualified as Terminal
 import System.Posix.Terminal      (TerminalMode (..))
 import System.Process             qualified as Process
@@ -25,27 +26,44 @@ import Viwrap.Pty.Utils           (uninstallTerminalModes)
 
 
 renv :: Env
-renv = Env { envCmd         = "racket"
+renv = Env { envCmd         = "python"
            , envCmdArgs     = []
            , envPollingRate = 10000
            , envBufferSize  = 2048
            , logFile        = "log.txt"
-           , childDied      = False
            }
 
-pollMasterFd :: (ViwrapEff effs, LastMember IO effs) => ProcessHandle -> HMaster -> Eff effs ()
+
+childDied :: (ViwrapEff effs, LastMember IO effs) => ExitCode -> Handle -> Eff effs ()
+childDied exitCode hMaster = do
+
+  stdout <- snd <$> getStdout
+
+
+  result <- pselect [hMaster] Wait
+
+  let [mMasterContent] = result
+
+  case mMasterContent of
+    Nothing        -> return ()
+    (Just content) -> hWrite stdout content >> childDied exitCode hMaster
+
+
+pollMasterFd :: (ViwrapEff effs, LastMember IO effs) => ProcessHandle -> Handle -> Eff effs ()
 pollMasterFd ph hMaster = do
 
-  let logPollM = logM "PollMaster"
   stdin  <- snd <$> getStdin
   stdout <- snd <$> getStdout
 
-  let poll = do
+  let logPoll = logM "pollMasterFd"
+      poll    = do
         mExitCode <- sendM (Process.getProcessExitCode ph)
 
         case mExitCode of
-          (Just exitCode) -> logPollM [printf "slave process exited with code: %s" $ show exitCode]
-          Nothing         -> do
+          (Just exitCode) ->
+            logPoll [printf "slave process exited with code: %s" $ show exitCode]
+              >> childDied exitCode hMaster
+          Nothing -> do
 
             results <- pselect [hMaster, stdin] Wait
 
@@ -85,4 +103,4 @@ app = do
   sendM (IO.hClose hMaster)
 
 launch :: IO ()
-launch = runPtyActIO app & runTerminalIO & runHandleActIO & runLoggerUnit & runReader renv & runM
+launch = runPtyActIO app & runTerminalIO & runHandleActIO & runLoggerIO & runReader renv & runM

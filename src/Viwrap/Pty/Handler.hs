@@ -64,8 +64,7 @@ runPtyActIO = interpret $ \case
   GetTermSize fd                        -> getTermSizeIO fd
   SetTermSize fdFrom fdTo               -> setTermSizeIO fdFrom fdTo
 
-openPtyIO
-  :: forall effs . (Members '[Logger] effs, LastMember IO effs) => Eff effs (FdMaster, FdSlave)
+openPtyIO :: forall effs . (Members '[Logger] effs, LastMember IO effs) => Eff effs (Fd, Fd)
 openPtyIO = do
 
   let logOpenPty = logM "OpenPty"
@@ -82,12 +81,12 @@ fdCloseIO fd = logM "FdClose" [printf "closing fd: %s" $ show fd] >> sendM (IO.c
 forkAndExecCmdIO
   :: forall effs
    . (Members '[Logger , Reader Env] effs, LastMember IO effs)
-  => HSlave
+  => Handle
   -> Eff effs ProcessHandle
 forkAndExecCmdIO sHandle = do
-  Env { envCmd } <- ask
+  Env { envCmd, envCmdArgs } <- ask
   logM "ForkAndExecCmd" [printf "starting process by executing %s cmd" envCmd]
-  (_, _, _, ph) <- sendM $ Process.createProcess_ "slave process" $ (Process.proc envCmd [])
+  (_, _, _, ph) <- sendM $ Process.createProcess_ "slave process" $ (Process.proc envCmd envCmdArgs)
     { delegate_ctlc = True
     , std_err       = UseHandle sHandle
     , std_out       = UseHandle sHandle
@@ -168,17 +167,25 @@ pselectIO handles timeout = do
       reader :: Handle -> IO ByteString
       reader handle = BS.hGetSome handle envBufferSize
 
-      f :: Maybe (Either SomeException (Maybe ByteString)) -> IO (Maybe ByteString)
-      f Nothing  = return Nothing
-      f (Just r) = either throwIO return r
+      tryReadContent :: Maybe (Either SomeException (Maybe ByteString)) -> IO (Maybe ByteString)
+      tryReadContent = maybe (return Nothing) (either throwIO return)
 
-  sendM do
+      logSelect      = logM "PSelect"
+
+  logSelect [printf "FDs: %s, Timeout: %s" (show handles) (show timeout)]
+  results <- sendM do
     readers <- mapM asyncReader handles
     void $ waitAny readers
-    results <- mapM (f <=< poll) readers
+    results <- mapM (tryReadContent <=< poll) readers
     mapM_ cancel readers
     return results
 
+
+  let fdAndContents :: [(Handle, ByteString)]
+      fdAndContents = foldMap (\(h, r) -> maybe mempty (\c -> [(h, c)]) r) $ zip handles results
+
+  logSelect [printf "Poll result: %s" (show fdAndContents)]
+  return results
 
 hWriteIO
   :: forall effs

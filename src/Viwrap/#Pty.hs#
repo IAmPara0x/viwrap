@@ -3,13 +3,9 @@ module Viwrap.Pty
   , Env (..)
   , HandleAct (..)
   , Logger (..)
-  , PtyAct (..)
   , Terminal (..)
   , Timeout (..)
   , ViwrapEff
-  , fdClose
-  , fdToHandle
-  , forkAndExecCmd
   , getStderr
   , getStdin
   , getStdout
@@ -38,17 +34,17 @@ type Cmd = String
 
 
 -- TODO: Is there a way to unite the API to use either Fd or Handle insread of using both?
-data PtyAct a where
-  OpenPty :: PtyAct (Fd, Fd)
-  FdToHandle :: Fd -> PtyAct Handle
-  ForkAndExecCmd :: Handle -> PtyAct ProcessHandle
-  FdClose :: Fd -> PtyAct ()
-  GetTerminalAttr :: Fd -> PtyAct TerminalAttributes
-  SetTerminalAttr :: Fd -> TerminalAttributes -> TerminalState -> PtyAct ()
-  SetTermSize :: Fd -> Fd -> PtyAct ()
-  GetTermSize :: Fd -> PtyAct TermSize
+-- data PtyAct a where
+--   OpenPty :: PtyAct (Fd, Fd)
+--   FdToHandle :: Fd -> PtyAct Handle
+--   ForkAndExecCmd :: Handle -> PtyAct ProcessHandle
+--   FdClose :: Fd -> PtyAct ()
+--   GetTerminalAttr :: Fd -> PtyAct TerminalAttributes
+--   SetTerminalAttr :: Fd -> TerminalAttributes -> TerminalState -> PtyAct ()
+--   SetTermSize :: Fd -> Fd -> PtyAct ()
+--   GetTermSize :: Fd -> PtyAct TermSize
 
-makeEffect ''PtyAct
+-- makeEffect ''PtyAct
 
 data Timeout
   = Wait
@@ -74,14 +70,16 @@ data Logger a where
 
 makeEffect ''Logger
 
-data Env
+data Env fd
   = Env
       { envCmd         :: Cmd
       , envCmdArgs     :: [String]
       , envPollingRate :: Int
       , envBufferSize  :: Int
       , logFile        :: FilePath
+      , masterFd       :: fd
+      , slaveFd       :: fd
       }
 
 
-type ViwrapEff effs = Members '[HandleAct , Logger , PtyAct , Terminal] effs
+type ViwrapEff effs = Members '[HandleAct , Logger ,  Terminal] effs
