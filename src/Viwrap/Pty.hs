@@ -1,54 +1,46 @@
+{-# LANGUAGE UndecidableInstances #-}
 module Viwrap.Pty
   ( Cmd
   , Env (..)
   , HandleAct (..)
   , Logger (..)
-  , PtyAct (..)
-  , Terminal (..)
+  , Process (..)
   , Timeout (..)
+  , ToHandle
   , ViwrapEff
-  , fdClose
-  , fdToHandle
-  , forkAndExecCmd
+  , ViwrapState (..)
+  , childIsDead
+  , envBufferSize
+  , envCmd
+  , envCmdArgs
+  , envPollingRate
   , getStderr
   , getStdin
   , getStdout
-  , getTermSize
-  , getTerminalAttr
   , hWrite
+  , isProcessDead
+  , isPromptUp
+  , logFile
   , logM
-  , openPty
+  , masterPty
+  , prevMasterContent
   , pselect
-  , setTermSize
-  , setTerminalAttr
+  , slavePty
   ) where
 
-import Control.Monad.Freer    (Members)
-import Control.Monad.Freer.TH (makeEffect)
-import Data.ByteString        (ByteString)
-import System.IO              (Handle)
-import System.Posix           (Fd)
-import System.Posix.Terminal  (TerminalAttributes, TerminalState)
-import System.Process         (ProcessHandle)
-
-import Viwrap.Pty.TermSize    (TermSize)
+import Control.Monad.Freer        (Eff, Member, Members, send)
+import Control.Monad.Freer.Reader (Reader)
+import Control.Monad.Freer.State  (State)
+import Control.Monad.Freer.TH     (makeEffect)
+import Data.ByteString            (ByteString)
+import Lens.Micro.TH              (makeLenses)
+import System.Exit                (ExitCode)
+import System.IO                  (Handle)
+import System.Posix               (Fd)
+import System.Process             (ProcessHandle)
 
 
 type Cmd = String
-
-
--- TODO: Is there a way to unite the API to use either Fd or Handle insread of using both?
-data PtyAct a where
-  OpenPty :: PtyAct (Fd, Fd)
-  FdToHandle :: Fd -> PtyAct Handle
-  ForkAndExecCmd :: Handle -> PtyAct ProcessHandle
-  FdClose :: Fd -> PtyAct ()
-  GetTerminalAttr :: Fd -> PtyAct TerminalAttributes
-  SetTerminalAttr :: Fd -> TerminalAttributes -> TerminalState -> PtyAct ()
-  SetTermSize :: Fd -> Fd -> PtyAct ()
-  GetTermSize :: Fd -> PtyAct TermSize
-
-makeEffect ''PtyAct
 
 data Timeout
   = Wait
@@ -56,32 +48,72 @@ data Timeout
   | Infinite
   deriving stock (Show)
 
-data HandleAct a where
-  Pselect :: [Handle] -> Timeout -> HandleAct [Maybe ByteString]
-  HWrite :: Handle -> ByteString -> HandleAct ()
+type family ToHandle a
+type instance ToHandle Fd = Handle
 
-makeEffect ''HandleAct
+data HandleAct fd a where
+  Pselect :: [ToHandle fd] -> Timeout -> HandleAct fd [Maybe ByteString]
+  HWrite :: ToHandle fd -> ByteString -> HandleAct fd ()
+  GetStdin :: HandleAct fd (fd, ToHandle fd)
+  GetStdout :: HandleAct fd (fd, ToHandle fd)
+  GetStderr :: HandleAct fd (fd, ToHandle fd)
 
-data Terminal a where
-  GetStdin :: Terminal (Fd, Handle)
-  GetStdout :: Terminal (Fd, Handle)
-  GetStderr :: Terminal (Fd, Handle)
 
-makeEffect ''Terminal
+pselect
+  :: forall fd effs
+   . (Member (HandleAct fd) effs)
+  => [ToHandle fd]
+  -> Timeout
+  -> Eff effs [Maybe ByteString]
+pselect handles = send . Pselect @fd handles
+
+hWrite
+  :: forall fd effs . (Member (HandleAct fd) effs) => ToHandle fd -> ByteString -> Eff effs ()
+hWrite handle = send . HWrite @fd handle
+
+getStdin :: forall fd effs . (Member (HandleAct fd) effs) => Eff effs (fd, ToHandle fd)
+getStdin = send GetStdin
+
+getStdout :: forall fd effs . (Member (HandleAct fd) effs) => Eff effs (fd, ToHandle fd)
+getStdout = send GetStdout
+
+getStderr :: forall fd effs . (Member (HandleAct fd) effs) => Eff effs (fd, ToHandle fd)
+getStderr = send GetStderr
 
 data Logger a where
   LogM :: String -> [String] -> Logger ()
 
 makeEffect ''Logger
 
-data Env
+data Process a where
+  IsProcessDead :: ProcessHandle -> Process (Maybe ExitCode)
+
+makeEffect ''Process
+
+data Env fd
   = Env
-      { envCmd         :: Cmd
-      , envCmdArgs     :: [String]
-      , envPollingRate :: Int
-      , envBufferSize  :: Int
-      , logFile        :: FilePath
+      { _envCmd         :: Cmd
+      , _envCmdArgs     :: [String]
+      , _envPollingRate :: Int
+      , _envBufferSize  :: Int
+      , _logFile        :: FilePath
+      , _masterPty      :: (fd, ToHandle fd)
+      , _slavePty       :: (fd, ToHandle fd)
       }
 
+deriving stock instance (Show fd, Show (ToHandle fd)) => Show (Env fd)
 
-type ViwrapEff effs = Members '[HandleAct , Logger , PtyAct , Terminal] effs
+makeLenses ''Env
+
+data ViwrapState
+  = ViwrapState
+      { _isPromptUp        :: Bool
+      , _childIsDead       :: Bool
+      , _prevMasterContent :: ByteString
+      }
+  deriving stock (Show)
+
+makeLenses ''ViwrapState
+
+type ViwrapEff fd effs
+  = Members '[HandleAct fd , Logger , Process , Reader (Env fd) , State ViwrapState] effs

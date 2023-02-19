@@ -2,105 +2,138 @@ module Viwrap
   ( launch
   ) where
 
-import Control.Monad.Freer        (Eff, LastMember, runM, sendM)
-import Control.Monad.Freer.Reader (runReader)
-import Data.Function              ((&))
+-- import Data.String (fromString)
+-- import System.Console.ANSI     qualified as ANSI
+import Control.Monad              (when, zipWithM_)
+import Control.Monad.Freer        (Eff, runM)
+import Control.Monad.Freer.Reader (ask, runReader)
+import Control.Monad.Freer.State  (evalState, get, modify)
+import Data.ByteString            (ByteString)
 
-import System.Exit                (ExitCode)
+import Lens.Micro                 ((&), (.~))
 import System.IO                  qualified as IO
-import System.IO                  (BufferMode (..), Handle, hSetBuffering)
+import System.IO                  (BufferMode (..), hSetBuffering)
+import System.Posix               qualified as IO
+import System.Posix               (Fd)
 import System.Posix.Terminal      qualified as Terminal
 import System.Posix.Terminal      (TerminalMode (..))
-import System.Process             qualified as Process
 import System.Process             (ProcessHandle)
 import Text.Printf                (printf)
 import Viwrap.Pty
-import Viwrap.Pty.Handler
-  ( runHandleActIO
-  , runLoggerIO
-  , runLoggerUnit
-  , runPtyActIO
-  , runTerminalIO
-  )
-import Viwrap.Pty.Utils           (uninstallTerminalModes)
+import Viwrap.Pty.Handler         (runHandleActIO, runLoggerIO, runProcessIO)
+import Viwrap.Pty.Utils
 
 
-renv :: Env
-renv = Env { envCmd         = "python"
-           , envCmdArgs     = []
-           , envPollingRate = 10000
-           , envBufferSize  = 2048
-           , logFile        = "log.txt"
-           }
+childDead :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
+childDead = do
 
-
-childDied :: (ViwrapEff effs, LastMember IO effs) => ExitCode -> Handle -> Eff effs ()
-childDied exitCode hMaster = do
-
-  stdout <- snd <$> getStdout
-
-
-  result <- pselect [hMaster] Wait
+  stdout                            <- snd <$> getStdout @fd
+  Env { _masterPty = (_, hMaster) } <- ask @(Env fd)
+  result                            <- pselect @fd [hMaster] Immediately
 
   let [mMasterContent] = result
 
   case mMasterContent of
-    Nothing        -> return ()
-    (Just content) -> hWrite stdout content >> childDied exitCode hMaster
+    Nothing        -> logM "childDied" ["Read all the output from slave process, exiting now."]
+    (Just content) -> hWrite @fd stdout content >> childDead @fd
 
 
-pollMasterFd :: (ViwrapEff effs, LastMember IO effs) => ProcessHandle -> Handle -> Eff effs ()
-pollMasterFd ph hMaster = do
-
-  stdin  <- snd <$> getStdin
-  stdout <- snd <$> getStdout
+pollMasterFd :: forall fd effs . (ViwrapEff fd effs) => ProcessHandle -> Eff effs ()
+pollMasterFd ph = do
 
   let logPoll = logM "pollMasterFd"
-      poll    = do
-        mExitCode <- sendM (Process.getProcessExitCode ph)
+
+  stdin                             <- snd <$> getStdin @fd
+  stdout                            <- snd <$> getStdout @fd
+  Env { _masterPty = (_, hMaster) } <- ask @(Env fd)
+
+  let handleMaster :: Maybe ByteString -> Eff effs ()
+      handleMaster (Just content) = do
+
+        modify (isPromptUp .~ False)
+        modify (prevMasterContent .~ content)
+        hWrite @fd stdout content
+
+      handleMaster Nothing = do
+        ViwrapState { _prevMasterContent } <- get
+        when (_prevMasterContent /= "\r\n") $ modify (isPromptUp .~ True)
+
+      handleStdIn :: Maybe ByteString -> Eff effs ()
+      handleStdIn Nothing        = return ()
+      handleStdIn (Just content) = hWrite @fd hMaster content
+
+      poll :: Eff effs ()
+      poll = do
+
+        mExitCode <- isProcessDead ph
 
         case mExitCode of
-          (Just exitCode) ->
+          (Just exitCode) -> do
             logPoll [printf "slave process exited with code: %s" $ show exitCode]
-              >> childDied exitCode hMaster
+            childDead @fd
+            modify (childIsDead .~ True)
+
           Nothing -> do
 
-            results <- pselect [hMaster, stdin] Wait
+            ViwrapState { _isPromptUp } <- get
 
-            let [mMasterContent, mStdinContent] = results
+            results                     <- if _isPromptUp
+              then pselect @fd [hMaster, stdin] Infinite
+              else pselect @fd [hMaster, stdin] Wait
 
-            maybe (return ()) (hWrite stdout)  mMasterContent
-            maybe (return ()) (hWrite hMaster) mStdinContent
+            zipWithM_ ($) [handleMaster, handleStdIn] results
 
-            pollMasterFd ph hMaster
+            poll
   poll
 
+initialise :: IO (Env Fd, ProcessHandle)
+initialise = do
+  (fdMaster, fdSlave) <- Terminal.openPseudoTerminal
+  hSetBuffering IO.stdin  NoBuffering
+  hSetBuffering IO.stdout NoBuffering
+  (hMaster, hSlave) <- (,) <$> IO.fdToHandle fdMaster <*> IO.fdToHandle fdSlave
 
-app :: (ViwrapEff effs, LastMember IO effs) => Eff effs ()
-app = do
+  let renv :: Env Fd
+      renv = Env { _envCmd         = "python"
+                 , _envCmdArgs     = []
+                 , _envPollingRate = 10000
+                 , _envBufferSize  = 2048
+                 , _logFile        = "log.txt"
+                 , _masterPty      = (fdMaster, hMaster)
+                 , _slavePty       = (fdSlave, hSlave)
+                 }
 
-  (fdStdin, hStdin ) <- getStdin
-  (_      , hStdout) <- getStdout
+      setup = do
+        setTermSizeIO IO.stdInput fdMaster
 
-  sendM (hSetBuffering hStdin NoBuffering)
-  sendM (hSetBuffering hStdout NoBuffering)
+        ph             <- forkAndExecCmdIO
 
-  (fdMaster, fdSlave) <- openPty
-  (hMaster , hSlave ) <- (,) <$> fdToHandle fdMaster <*> fdToHandle fdSlave
+        masterTermAttr <- getTerminalAttrIO fdMaster
+        setTerminalAttrIO IO.stdInput masterTermAttr Terminal.Immediately
+        uninstallTerminalModes IO.stdInput [EnableEcho, ProcessInput] Terminal.Immediately
+        return ph
 
-  setTermSize fdStdin fdMaster
+  ph <- runM $ runReader renv $ runLoggerIO setup
 
-  ph             <- forkAndExecCmd hSlave
+  return (renv, ph)
 
-  masterTermAttr <- getTerminalAttr fdMaster
-  setTerminalAttr fdStdin masterTermAttr Terminal.Immediately
-  uninstallTerminalModes fdStdin [EnableEcho, ProcessInput] Terminal.Immediately
+cleanup :: Env Fd -> IO ()
+cleanup Env {..} = do
+  IO.hClose (snd _masterPty)
+  IO.hClose (snd _slavePty)
 
-
-  () <- pollMasterFd ph hMaster
-
-  sendM (IO.hClose hSlave)
-  sendM (IO.hClose hMaster)
+initialViwrapState :: ViwrapState
+initialViwrapState =
+  ViwrapState { _childIsDead = False, _isPromptUp = False, _prevMasterContent = mempty }
 
 launch :: IO ()
-launch = runPtyActIO app & runTerminalIO & runHandleActIO & runLoggerIO & runReader renv & runM
+launch = do
+  (renv, ph) <- initialise
+
+  runHandleActIO (pollMasterFd @Fd ph)
+    & runProcessIO
+    & runLoggerIO
+    & evalState initialViwrapState
+    & runReader renv
+    & runM
+  cleanup renv

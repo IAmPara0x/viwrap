@@ -173,3 +173,6 @@ output/
 *~
 
 log.txt
+.mypy_cache/
+
+*.hs#

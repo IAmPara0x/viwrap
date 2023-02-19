@@ -26,12 +26,14 @@ flags:
     default: False
 
 dependencies:
+- ansi-terminal
 - async
 - base >= 4.7 && < 5
 - bytestring
 - freer-simple
 - process
-- transformers
+- microlens
+- microlens-th
 - unagi-chan
 - unix
 - utf8-string
