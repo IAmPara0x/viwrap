@@ -2,13 +2,12 @@ module Viwrap
   ( launch
   ) where
 
--- import Data.String (fromString)
--- import System.Console.ANSI     qualified as ANSI
-import Control.Monad              (when, zipWithM_)
+import Control.Monad              (void, when, zipWithM_)
 import Control.Monad.Freer        (Eff, runM)
 import Control.Monad.Freer.Reader (ask, runReader)
 import Control.Monad.Freer.State  (evalState, get, modify)
 import Data.ByteString            (ByteString)
+import Data.ByteString            qualified as BS
 
 import Lens.Micro                 ((&), (.~))
 import System.IO                  qualified as IO
@@ -22,6 +21,8 @@ import Text.Printf                (printf)
 import Viwrap.Pty
 import Viwrap.Pty.Handler         (runHandleActIO, runLoggerIO, runProcessIO)
 import Viwrap.Pty.Utils
+import Viwrap.VI
+import Viwrap.VI.Handler          (handleVITerminal)
 
 
 childDead :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
@@ -37,6 +38,16 @@ childDead = do
     Nothing        -> logM "childDied" ["Read all the output from slave process, exiting now."]
     (Just content) -> hWrite @fd stdout content >> childDead @fd
 
+
+handleNewline :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
+handleNewline = do
+
+  hmaster <- snd . _masterPty <$> ask @(Env fd)
+  stdout  <- snd <$> getStdout @fd
+
+  hWrite @fd hmaster "\n"
+  hWrite @fd stdout "\n"
+  modify (viLine .~ initialVILine)
 
 pollMasterFd :: forall fd effs . (ViwrapEff fd effs) => ProcessHandle -> Eff effs ()
 pollMasterFd ph = do
@@ -60,7 +71,20 @@ pollMasterFd ph = do
 
       handleStdIn :: Maybe ByteString -> Eff effs ()
       handleStdIn Nothing        = return ()
-      handleStdIn (Just content) = hWrite @fd hMaster content
+      handleStdIn (Just content) = do
+        VILine {..} <- _viLine <$> get
+
+        case _viMode of
+          Normal | content == BS.singleton 104 -> void moveLeft
+          Normal | content == BS.singleton 108 -> void moveRight
+          Normal | content == BS.singleton 105 -> modify (viLine . viMode .~ Insert)
+          Normal | content == BS.singleton 100 -> void backspace
+          Normal | content == BS.singleton 10  -> handleNewline @fd
+          Normal | otherwise                   -> return ()
+          Insert | content == BS.singleton 10  -> handleNewline @fd
+          Insert | content == BS.singleton 27  -> modify (viLine . viMode .~ Normal)
+          Insert | content == BS.singleton 127 -> void backspace
+          Insert | otherwise                   -> void $ insertBS content
 
       poll :: Eff effs ()
       poll = do
@@ -77,9 +101,7 @@ pollMasterFd ph = do
 
             ViwrapState { _isPromptUp } <- get
 
-            results                     <- if _isPromptUp
-              then pselect @fd [hMaster, stdin] Infinite
-              else pselect @fd [hMaster, stdin] Wait
+            results <- pselect @fd [hMaster, stdin] $ if _isPromptUp then Infinite else Wait
 
             zipWithM_ ($) [handleMaster, handleStdIn] results
 
@@ -111,6 +133,7 @@ initialise = do
         masterTermAttr <- getTerminalAttrIO fdMaster
         setTerminalAttrIO IO.stdInput masterTermAttr Terminal.Immediately
         uninstallTerminalModes IO.stdInput [EnableEcho, ProcessInput] Terminal.Immediately
+        uninstallTerminalModes fdMaster    [EnableEcho]               Terminal.Immediately
         return ph
 
   ph <- runM $ runReader renv $ runLoggerIO setup
@@ -122,15 +145,20 @@ cleanup Env {..} = do
   IO.hClose (snd _masterPty)
   IO.hClose (snd _slavePty)
 
+
 initialViwrapState :: ViwrapState
-initialViwrapState =
-  ViwrapState { _childIsDead = False, _isPromptUp = False, _prevMasterContent = mempty }
+initialViwrapState = ViwrapState { _childIsDead       = False
+                                 , _isPromptUp        = False
+                                 , _prevMasterContent = mempty
+                                 , _viLine            = initialVILine
+                                 }
 
 launch :: IO ()
 launch = do
   (renv, ph) <- initialise
 
-  runHandleActIO (pollMasterFd @Fd ph)
+  handleVITerminal @Fd (pollMasterFd @Fd ph)
+    & runHandleActIO
     & runProcessIO
     & runLoggerIO
     & evalState initialViwrapState

@@ -77,3 +77,4 @@ setTermSize (Fd fromFd) (Fd toFd) = do
   void $ c_ioctl toFd TIOCSCTTY ptr_ws
 
   free ptr_ws
+

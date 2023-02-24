@@ -26,6 +26,7 @@ module Viwrap.Pty
   , prevMasterContent
   , pselect
   , slavePty
+  , viLine
   ) where
 
 import Control.Monad.Freer        (Eff, Member, Members, send)
@@ -38,6 +39,7 @@ import System.Exit                (ExitCode)
 import System.IO                  (Handle)
 import System.Posix               (Fd)
 import System.Process             (ProcessHandle)
+import Viwrap.VI                  (VIEdit, VILine)
 
 
 type Cmd = String
@@ -110,10 +112,11 @@ data ViwrapState
       { _isPromptUp        :: Bool
       , _childIsDead       :: Bool
       , _prevMasterContent :: ByteString
+      , _viLine            :: VILine
       }
   deriving stock (Show)
 
 makeLenses ''ViwrapState
 
 type ViwrapEff fd effs
-  = Members '[HandleAct fd , Logger , Process , Reader (Env fd) , State ViwrapState] effs
+  = Members '[HandleAct fd , Logger , Process , Reader (Env fd) , State ViwrapState , VIEdit] effs

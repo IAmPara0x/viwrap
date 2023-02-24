@@ -29,12 +29,13 @@ flag prod
 
 library
   exposed-modules:
-      VI
       Viwrap
       Viwrap.Pty
       Viwrap.Pty.Handler
       Viwrap.Pty.TermSize
       Viwrap.Pty.Utils
+      Viwrap.VI
+      Viwrap.VI.Handler
   other-modules:
       Paths_viwrap
   hs-source-dirs:
