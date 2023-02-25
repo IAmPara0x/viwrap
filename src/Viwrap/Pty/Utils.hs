@@ -7,10 +7,13 @@ module Viwrap.Pty.Utils
   , setTermSizeIO
   , setTerminalAttrIO
   , uninstallTerminalModes
+  , writeMaster
+  , writeStdout
   ) where
 
 import Control.Monad.Freer        (Eff, LastMember, Members, sendM)
 import Control.Monad.Freer.Reader (Reader, ask)
+import Data.ByteString            (ByteString)
 import System.Posix               (Fd)
 import System.Posix.Terminal      qualified as Terminal
 import System.Posix.Terminal      (TerminalAttributes, TerminalMode (..), TerminalState)
@@ -157,3 +160,15 @@ setTermSizeIO fdFrom fdTo = do
   newSize <- sendM $ getTermSize fdTo
   logM "SetTermSize" [printf "FD: %s, New TermSize: %s" (show fdTo) (show newSize)]
 
+
+writeStdout
+  :: forall fd effs . (Members '[Reader (Env fd) , HandleAct fd] effs) => ByteString -> Eff effs ()
+writeStdout content = do
+  stdout <- snd <$> getStdout @fd
+  hWrite @fd stdout content
+
+writeMaster
+  :: forall fd effs . (Members '[Reader (Env fd) , HandleAct fd] effs) => ByteString -> Eff effs ()
+writeMaster content = do
+  hmaster <- snd . _masterPty <$> ask @(Env fd)
+  hWrite @fd hmaster content

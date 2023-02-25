@@ -25,6 +25,7 @@ module Viwrap.Pty
   , masterPty
   , prevMasterContent
   , pselect
+  , setCursorPos
   , slavePty
   , viLine
   ) where
@@ -110,6 +111,7 @@ makeLenses ''Env
 data ViwrapState
   = ViwrapState
       { _isPromptUp        :: Bool
+      , _setCursorPos      :: Bool
       , _childIsDead       :: Bool
       , _prevMasterContent :: ByteString
       , _viLine            :: VILine

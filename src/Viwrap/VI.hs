@@ -34,8 +34,8 @@ makeLenses ''VILine
 
 data VIEdit a where
   Backspace :: VIEdit VILine
-  MoveLeft :: VIEdit VILine
-  MoveRight :: VIEdit VILine
+  MoveLeft :: Int -> VIEdit VILine
+  MoveRight :: Int -> VIEdit VILine
   InsertBS :: ByteString -> VIEdit VILine
 
 makeEffect ''VIEdit

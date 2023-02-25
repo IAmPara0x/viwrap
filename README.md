@@ -19,9 +19,13 @@
 
 - [ ] Start implementing basic vim like editing.
 
+- [ ] How to determine when to supperese output from hmaster and when not to?
+
 ## Questions
 
 - [ ] can we get controlling terminal for the slave proceess?
 	  - But why do we even need a controling terminal?
 	
 - [ ] How to identify when the prompt is up?
+
+- [ ] How to determine when to supperese output from hmaster and when not to?

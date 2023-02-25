@@ -36,6 +36,7 @@ library
       Viwrap.Pty.Utils
       Viwrap.VI
       Viwrap.VI.Handler
+      Viwrap.VI.Utils
   other-modules:
       Paths_viwrap
   hs-source-dirs:
@@ -63,6 +64,7 @@ library
     , microlens
     , microlens-th
     , process
+    , regex
     , unagi-chan
     , unix
     , utf8-string
@@ -101,6 +103,7 @@ executable viwrap-exe
     , microlens
     , microlens-th
     , process
+    , regex
     , unagi-chan
     , unix
     , utf8-string
@@ -137,6 +140,7 @@ test-suite viwrap-test
     , microlens
     , microlens-th
     , process
+    , regex
     , unagi-chan
     , unix
     , utf8-string

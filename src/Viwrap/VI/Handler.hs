@@ -2,12 +2,13 @@ module Viwrap.VI.Handler
   ( handleVITerminal
   ) where
 
-import Control.Monad              (void, when)
+import Control.Monad              (when)
 import Control.Monad.Freer        (Eff, Members, interpret)
 import Control.Monad.Freer.Reader (Reader, asks)
 import Control.Monad.Freer.State  (State, get, modify)
 
 import Viwrap.Pty
+import Viwrap.Pty.Utils
 import Viwrap.VI
 
 import Lens.Micro                 ((%~), (.~), (^.))
@@ -26,10 +27,10 @@ type ViwrapEff' fd effs
 handleVITerminal
   :: forall fd a effs . (ViwrapEff' fd effs) => Eff (VIEdit ': effs) a -> Eff effs a
 handleVITerminal = interpret \case
-  Backspace   -> backspaceTerminal @fd
-  MoveLeft    -> moveLeftTerminal @fd
-  MoveRight   -> moveRightTerminal @fd
-  InsertBS bs -> insertCharTerminal @fd bs
+  Backspace    -> backspaceTerminal @fd
+  MoveLeft  n  -> moveLeftTerminal @fd n >> _viLine <$> get
+  MoveRight n  -> moveRightTerminal @fd n >> _viLine <$> get
+  InsertBS  bs -> insertCharTerminal @fd bs
 
 
 insertCharTerminal :: forall fd effs . (ViwrapEff' fd effs) => ByteString -> Eff effs VILine
@@ -45,17 +46,13 @@ insertCharTerminal inputBS = do
       modifyVILine               = do
 
         hmaster <- asks @(Env fd) (snd . (^. masterPty))
-        stdout  <- snd <$> getStdout @fd
 
         eraseAndWrite @fd hmaster (BS.length endContent) $ mconcat [inputBS, endContent]
 
-        moveCursorRight @fd $ BS.length _viLineContents - _viCursorPos
+        moveRightTerminal @fd $ BS.length _viLineContents - _viCursorPos
+        writeStdout @fd $ fromString ANSI.hideCursorCode
 
-        eraseAndWrite @fd stdout (BS.length endContent) $ mconcat
-          [ inputBS
-          , endContent
-          , fromString $ ANSI.cursorBackwardCode $ BS.length newLineContent - finalCursorPos
-          ]
+        modify (setCursorPos .~ True)
 
         modify (viLine . viCursorPos .~ finalCursorPos)
         modify (viLine . viLineContents .~ newLineContent)
@@ -66,32 +63,29 @@ insertCharTerminal inputBS = do
   logM "insertCharTerminal" [show r]
   return r
 
-moveLeftTerminal :: forall fd effs . (ViwrapEff' fd effs) => Eff effs VILine
-moveLeftTerminal = do
+moveLeftTerminal :: forall fd effs . (ViwrapEff' fd effs) => Int -> Eff effs ()
+moveLeftTerminal n = do
+
   VILine {..} <- _viLine <$> get
 
-  let modifyVILine = do
+  let movePos = min n _viCursorPos
 
-        stdout <- snd <$> getStdout @fd
-        modify (viLine . viCursorPos %~ (\x -> x - 1))
-        hWrite @fd stdout (fromString $ ANSI.cursorBackwardCode 1)
+  modify (viLine . viCursorPos %~ (\x -> x - movePos))
+  writeStdout @fd (fromString $ ANSI.cursorBackwardCode movePos)
 
-  when (_viCursorPos /= 0) modifyVILine
   r <- _viLine <$> get
   logM "moveLeftTerminal" [show r]
-  return r
 
-moveRightTerminal :: forall fd effs . (ViwrapEff' fd effs) => Eff effs VILine
-moveRightTerminal = do
+moveRightTerminal :: forall fd effs . (ViwrapEff' fd effs) => Int -> Eff effs ()
+moveRightTerminal n = do
   VILine {..} <- _viLine <$> get
 
-  let modifyVILine = do
-        moveCursorRight @fd 1
+  let movePos = min n (BS.length _viLineContents - _viCursorPos)
 
-  when (_viCursorPos /= BS.length _viLineContents) modifyVILine
+  modify (viLine . viCursorPos %~ (+ movePos))
+  writeStdout @fd (fromString $ ANSI.cursorForwardCode movePos)
   r <- _viLine <$> get
   logM "moveRightTerminal" [show r]
-  return r
 
 backspaceTerminal :: forall fd effs . (ViwrapEff' fd effs) => Eff effs VILine
 backspaceTerminal = do
@@ -100,7 +94,6 @@ backspaceTerminal = do
 
 
   hmaster     <- asks @(Env fd) (snd . (^. masterPty))
-  stdout      <- snd <$> getStdout @fd
 
   let finalCursorPos = _viCursorPos - 1
       startContent   = BS.take finalCursorPos _viLineContents
@@ -110,8 +103,8 @@ backspaceTerminal = do
 
       modifyVILine   = do
         eraseAndWrite @fd hmaster (endContentLen + 1) endContent
-        hWrite @fd stdout
-          $ mconcat ["\b\ESC[K", endContent, fromString $ ANSI.cursorBackwardCode endContentLen]
+        moveRightTerminal @fd $ BS.length _viLineContents - _viCursorPos
+        modify (setCursorPos .~ True)
 
         modify (viLine . viCursorPos .~ finalCursorPos)
         modify (viLine . viLineContents .~ newLineContent)
@@ -120,20 +113,6 @@ backspaceTerminal = do
   r <- _viLine <$> get
   logM "backspaceTerminal" [show r]
   return r
-
-
-moveCursorRight :: forall fd effs . (ViwrapEff' fd effs) => Int -> Eff effs ()
-moveCursorRight n = do
-  stdout <- snd <$> getStdout @fd
-  hWrite @fd stdout (fromString $ ANSI.cursorForwardCode n)
-  modify (viLine . viCursorPos %~ (+ n))
-
-
-moveCursorLeft :: forall fd effs . (ViwrapEff' fd effs) => Int -> Eff effs ()
-moveCursorLeft n = do
-  stdout <- snd <$> getStdout @fd
-  hWrite @fd stdout (fromString $ ANSI.cursorBackwardCode n)
-  modify (viLine . viCursorPos %~ (\x -> x - n))
 
 eraseAndWrite
   :: forall fd effs . (ViwrapEff' fd effs) => ToHandle fd -> Int -> ByteString -> Eff effs ()
