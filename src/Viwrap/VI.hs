@@ -7,13 +7,15 @@ module Viwrap.VI
   , insertBS
   , moveLeft
   , moveRight
+  , updateVILine
   , viCursorPos
-  , viLineContents
+  , viLineContent
   , viMode
   ) where
 
 import Control.Monad.Freer.TH (makeEffect)
 import Data.ByteString        (ByteString)
+import Data.ByteString        qualified as BS
 import Lens.Micro.TH          (makeLenses)
 
 data VIMode
@@ -24,9 +26,9 @@ data VIMode
 
 data VILine
   = VILine
-      { _viLineContents :: ByteString
-      , _viCursorPos    :: Int
-      , _viMode         :: VIMode
+      { _viLineContent :: ByteString
+      , _viCursorPos   :: Int
+      , _viMode        :: VIMode
       }
   deriving stock (Show)
 
@@ -42,4 +44,11 @@ makeEffect ''VIEdit
 
 
 initialVILine :: VILine
-initialVILine = VILine { _viLineContents = mempty, _viCursorPos = 0, _viMode = Insert }
+initialVILine = VILine { _viLineContent = mempty, _viCursorPos = 0, _viMode = Insert }
+
+updateVILine :: ByteString -> VILine -> VILine
+updateVILine newcontent VILine {..} = VILine
+  { _viMode
+  , _viCursorPos   = _viCursorPos + (BS.length newcontent - BS.length _viLineContent)
+  , _viLineContent = newcontent
+  }

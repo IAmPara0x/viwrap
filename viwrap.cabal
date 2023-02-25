@@ -60,12 +60,11 @@ library
     , async
     , base >=4.7 && <5
     , bytestring
+    , containers
     , freer-simple
     , microlens
     , microlens-th
     , process
-    , regex
-    , unagi-chan
     , unix
     , utf8-string
   default-language: GHC2021
@@ -99,12 +98,11 @@ executable viwrap-exe
     , async
     , base >=4.7 && <5
     , bytestring
+    , containers
     , freer-simple
     , microlens
     , microlens-th
     , process
-    , regex
-    , unagi-chan
     , unix
     , utf8-string
     , viwrap
@@ -136,12 +134,11 @@ test-suite viwrap-test
     , async
     , base >=4.7 && <5
     , bytestring
+    , containers
     , freer-simple
     , microlens
     , microlens-th
     , process
-    , regex
-    , unagi-chan
     , unix
     , utf8-string
     , viwrap

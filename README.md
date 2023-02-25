@@ -6,7 +6,8 @@
 - [X] Add terminal effect
 - [X] Implement FFI for getting and setting terminal size
 - [X] implement a way to detect when a prompt is up (This task will need continuous work as we encounter new edge cases)
-- [ ] Start implementing basic vim like editing.
+- [X] Start implementing basic vim like editing.
+- [ ] Implement Advance vim editting features
 - [ ] Figure out a better way to handle colored prompt
 - [ ] Install singal handlers
 	  - [ ] SIGWICH as we need to resize the master fd when the stdin size changes
@@ -17,9 +18,7 @@
 
 ## working on
 
-- [ ] Start implementing basic vim like editing.
-
-- [ ] How to determine when to supperese output from hmaster and when not to?
+- [ ] Implement Advance vim editting features
 
 ## Questions
 
@@ -28,4 +27,4 @@
 	
 - [ ] How to identify when the prompt is up?
 
-- [ ] How to determine when to supperese output from hmaster and when not to?
+- [X] How to determine when to supperese output from hmaster and when not to?

@@ -18,6 +18,7 @@ module Viwrap.Pty
   , getStdin
   , getStdout
   , hWrite
+  , initialViwrapState
   , isProcessDead
   , isPromptUp
   , logFile
@@ -40,7 +41,7 @@ import System.Exit                (ExitCode)
 import System.IO                  (Handle)
 import System.Posix               (Fd)
 import System.Process             (ProcessHandle)
-import Viwrap.VI                  (VIEdit, VILine)
+import Viwrap.VI                  (VIEdit, VILine, initialVILine)
 
 
 type Cmd = String
@@ -122,3 +123,12 @@ makeLenses ''ViwrapState
 
 type ViwrapEff fd effs
   = Members '[HandleAct fd , Logger , Process , Reader (Env fd) , State ViwrapState , VIEdit] effs
+
+
+initialViwrapState :: ViwrapState
+initialViwrapState = ViwrapState { _childIsDead       = False
+                                 , _isPromptUp        = False
+                                 , _prevMasterContent = mempty
+                                 , _viLine            = initialVILine
+                                 , _setCursorPos      = False
+                                 }

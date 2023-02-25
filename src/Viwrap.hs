@@ -2,12 +2,13 @@ module Viwrap
   ( launch
   ) where
 
-import Control.Monad              (unless, void, when, zipWithM_)
+import Control.Monad              (when, zipWithM_)
 import Control.Monad.Freer        (Eff, runM)
 import Control.Monad.Freer.Reader (ask, runReader)
 import Control.Monad.Freer.State  (evalState, get, modify)
 import Data.ByteString            (ByteString)
 import Data.ByteString            qualified as BS
+import Data.Maybe                 (isNothing)
 
 import Data.String                (fromString)
 import Lens.Micro                 ((&), (.~))
@@ -24,13 +25,13 @@ import Text.Printf                (printf)
 import Viwrap.Pty
 import Viwrap.Pty.Handler         (runHandleActIO, runLoggerIO, runProcessIO)
 import Viwrap.Pty.Utils
-import Viwrap.VI
+import Viwrap.VI                  (VILine (..))
 import Viwrap.VI.Handler          (handleVITerminal)
-import Viwrap.VI.Utils            (moveToBeginning, moveToEnd)
+import Viwrap.VI.Utils            (defKeyMap, keyAction)
 
 
-childDead :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
-childDead = do
+handleDeadChild :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
+handleDeadChild = do
 
   hmaster <- snd . _masterPty <$> ask @(Env fd)
   result  <- pselect @fd [hmaster] Immediately
@@ -39,68 +40,40 @@ childDead = do
 
   case mMasterContent of
     Nothing        -> logM "childDied" ["Read all the output from slave process, exiting now."]
-    (Just content) -> writeStdout @fd content >> childDead @fd
-
-handleNewline :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
-handleNewline = do
-  writeMaster @fd "\n"
-  modify (viLine .~ initialVILine)
-  modify (isPromptUp .~ False)
-  modify (setCursorPos .~ True)
-
-handleClear :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
-handleClear = do
-
-  writeStdout @fd
-    $ mconcat [fromString ANSI.clearScreenCode, fromString $ ANSI.setCursorPositionCode 0 0]
+    (Just content) -> writeStdout @fd content >> handleDeadChild @fd
 
 handleMaster :: forall fd effs . (ViwrapEff fd effs) => Maybe ByteString -> Eff effs ()
-handleMaster (Just content) = do
-  modify (isPromptUp .~ False)
-  writeStdout @fd content
+handleMaster mcontent = do
 
-handleMaster Nothing = do
+  modify (isPromptUp .~ isNothing mcontent)
+
   ViwrapState { _setCursorPos, _viLine = VILine {..} } <- get
 
-  modify (isPromptUp .~ True)
-  when
-    _setCursorPos
-    do
-      modify (setCursorPos .~ False)
-      writeStdout @fd $ mconcat
-        [ fromString $ ANSI.cursorBackwardCode $ BS.length _viLineContents - _viCursorPos
-        , fromString ANSI.showCursorCode
-        ]
-
+  case mcontent of
+    Just content -> writeStdout @fd content
+    Nothing      -> when
+      _setCursorPos
+      do
+        modify (setCursorPos .~ False)
+        writeStdout @fd $ foldMap
+          fromString
+          [ ANSI.cursorBackwardCode $ BS.length _viLineContent - _viCursorPos
+          , fromString ANSI.showCursorCode
+          ]
 
 pollMasterFd :: forall fd effs . (ViwrapEff fd effs) => ProcessHandle -> Eff effs ()
 pollMasterFd ph = do
 
   let logPoll = logM "pollMasterFd"
 
-  stdin                             <- snd <$> getStdin @fd
-  Env { _masterPty = (_, hMaster) } <- ask @(Env fd)
+  stdin   <- snd <$> getStdin @fd
+  hMaster <- snd . _masterPty <$> ask @(Env fd)
 
   let handleStdIn :: Maybe ByteString -> Eff effs ()
       handleStdIn Nothing        = return ()
       handleStdIn (Just content) = do
         VILine {..} <- _viLine <$> get
-
-        case _viMode of
-          Normal | content == BS.singleton 10  -> handleNewline @fd
-          Normal | content == BS.singleton 65  -> moveToEnd @fd
-          Normal | content == BS.singleton 73  -> moveToBeginning @fd
-          Normal | content == BS.singleton 100 -> void backspace
-          Normal | content == BS.singleton 104 -> void $ moveLeft 1
-          Normal | content == BS.singleton 105 -> modify (viLine . viMode .~ Insert)
-          Normal | content == BS.singleton 108 -> void $ moveRight 1
-          Normal | otherwise                   -> return ()
-          Insert | content == BS.singleton 4   -> handleNewline @fd
-          Insert | content == BS.singleton 10  -> handleNewline @fd
-          Insert | content == BS.singleton 12  -> handleClear @fd
-          Insert | content == BS.singleton 27  -> modify (viLine . viMode .~ Normal)
-          Insert | content == BS.singleton 127 -> void backspace
-          Insert | otherwise                   -> void $ insertBS content
+        keyAction @fd (defKeyMap @fd) _viMode $ BS.head content
 
       poll :: Eff effs ()
       poll = do
@@ -110,7 +83,7 @@ pollMasterFd ph = do
         case mExitCode of
           (Just exitCode) -> do
             logPoll [printf "slave process exited with code: %s" $ show exitCode]
-            childDead @fd
+            handleDeadChild @fd
             modify (childIsDead .~ True)
 
           Nothing -> do
@@ -160,14 +133,6 @@ cleanup :: Env Fd -> IO ()
 cleanup Env {..} = do
   IO.hClose (snd _masterPty)
   IO.hClose (snd _slavePty)
-
-initialViwrapState :: ViwrapState
-initialViwrapState = ViwrapState { _childIsDead       = False
-                                 , _isPromptUp        = False
-                                 , _prevMasterContent = mempty
-                                 , _viLine            = initialVILine
-                                 , _setCursorPos      = False
-                                 }
 
 launch :: IO ()
 launch = do

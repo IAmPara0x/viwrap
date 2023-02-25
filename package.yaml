@@ -30,12 +30,11 @@ dependencies:
 - async
 - base >= 4.7 && < 5
 - bytestring
+- containers
 - freer-simple
 - process
-- regex
 - microlens
 - microlens-th
-- unagi-chan
 - unix
 - utf8-string
 
