@@ -33,6 +33,7 @@ dependencies:
 - containers
 - freer-simple
 - process
+- megaparsec
 - microlens
 - microlens-th
 - unix

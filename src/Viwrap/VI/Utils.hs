@@ -14,10 +14,10 @@ import Control.Monad.Freer.State (get, modify)
 import Data.Map                  (Map)
 import Data.Map                  qualified as Map
 import Data.Word                 (Word8)
-import Lens.Micro
-import Viwrap.Pty
-import Viwrap.Pty.Utils
+import Lens.Micro                ((.~))
+import Viwrap.Pty                (ViwrapEff, ViwrapState (..), viLine)
 import Viwrap.VI
+import Viwrap.VI.Handler         (handleNewline, handleTab)
 
 import Data.ByteString           qualified as BS
 
@@ -32,13 +32,6 @@ moveToEnd = do
   void $ moveRight (BS.length _viLineContent - _viCursorPos)
 
 
-handleNewline :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
-handleNewline = do
-  writeMaster @fd "\n"
-  modify (viLine .~ initialVILine)
-  modify (isPromptUp .~ False)
-  modify (setCursorPos .~ True)
-
 toMode :: forall fd effs . (ViwrapEff fd effs) => VIMode -> Eff effs ()
 toMode mode = modify (viLine . viMode .~ mode)
 
@@ -49,12 +42,14 @@ defKeyMap = Map.fromList
   [ ((Normal, 10) , handleNewline @fd)
   , ((Normal, 65) , moveToEnd @fd >> toMode @fd Insert)
   , ((Normal, 73) , moveToBeginning @fd >> toMode @fd Insert)
+  -- , ((Normal, 99), writeMaster @fd $ mconcat [BS.singleton 3])
   , ((Normal, 100), void backspace)
   , ((Normal, 104), void $ moveLeft 1)
   , ((Normal, 105), modify (viLine . viMode .~ Insert))
   , ((Normal, 108), void $ moveRight 1)
 
        -- Insert Mode KeyMap
+  , ((Insert, 9)  , handleTab @fd)
   , ((Insert, 10) , handleNewline @fd)
   , ((Insert, 27) , modify (viLine . viMode .~ Normal))
   , ((Insert, 127), void backspace)

@@ -7,6 +7,11 @@
 - [X] Implement FFI for getting and setting terminal size
 - [X] implement a way to detect when a prompt is up (This task will need continuous work as we encounter new edge cases)
 - [X] Start implementing basic vim like editing.
+
+- [ ] Implement Tab when the cursor is at the middle of the line
+- [ ] Differentiate betweeen \t and space
+- [ ] Find a way to find Jittery cursor.
+- [ ] Fix Jittery cursor
 - [ ] Implement Advance vim editting features
 - [ ] Figure out a better way to handle colored prompt
 - [ ] Install singal handlers
@@ -19,6 +24,8 @@
 ## working on
 
 - [ ] Implement Advance vim editting features
+- [ ] Improve ANSI escape sequence parser
+- [ ] Find a way to find Jittery cursor.
 
 ## Questions
 

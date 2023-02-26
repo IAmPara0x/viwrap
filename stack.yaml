@@ -36,6 +36,7 @@ packages:
 # forks / in-progress versions pinned to a git hash. For example:
 #
 # extra-deps:
+#   - vgrep-0.2.3.0@sha256:423ab4992c092d10074b241447acd2efb505d32cb02b712f8ffd9d01308f47a5,6110
 # - acme-missiles-0.3
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a

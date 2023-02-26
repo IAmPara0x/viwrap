@@ -26,8 +26,8 @@ module Viwrap.Pty
   , masterPty
   , prevMasterContent
   , pselect
-  , setCursorPos
   , slavePty
+  , viHook
   , viLine
   ) where
 
@@ -41,7 +41,7 @@ import System.Exit                (ExitCode)
 import System.IO                  (Handle)
 import System.Posix               (Fd)
 import System.Process             (ProcessHandle)
-import Viwrap.VI                  (VIEdit, VILine, initialVILine)
+import Viwrap.VI                  (VIEdit, VIHook, VILine, initialVILine)
 
 
 type Cmd = String
@@ -112,10 +112,10 @@ makeLenses ''Env
 data ViwrapState
   = ViwrapState
       { _isPromptUp        :: Bool
-      , _setCursorPos      :: Bool
       , _childIsDead       :: Bool
       , _prevMasterContent :: ByteString
       , _viLine            :: VILine
+      , _viHook            :: Maybe VIHook
       }
   deriving stock (Show)
 
@@ -124,11 +124,10 @@ makeLenses ''ViwrapState
 type ViwrapEff fd effs
   = Members '[HandleAct fd , Logger , Process , Reader (Env fd) , State ViwrapState , VIEdit] effs
 
-
 initialViwrapState :: ViwrapState
 initialViwrapState = ViwrapState { _childIsDead       = False
                                  , _isPromptUp        = False
                                  , _prevMasterContent = mempty
                                  , _viLine            = initialVILine
-                                 , _setCursorPos      = False
+                                 , _viHook            = Nothing
                                  }

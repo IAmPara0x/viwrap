@@ -23,10 +23,10 @@ import System.Posix.Terminal      (TerminalMode (..))
 import System.Process             (ProcessHandle)
 import Text.Printf                (printf)
 import Viwrap.Pty
-import Viwrap.Pty.Handler         (runHandleActIO, runLoggerIO, runProcessIO)
+import Viwrap.Pty.Handler         (runHandleActIO, runLoggerIO, runLoggerUnit, runProcessIO)
 import Viwrap.Pty.Utils
-import Viwrap.VI                  (VILine (..))
-import Viwrap.VI.Handler          (handleVITerminal)
+import Viwrap.VI                  (VIHook (..), VILine (..))
+import Viwrap.VI.Handler          (handleVIHook, handleVITerminal)
 import Viwrap.VI.Utils            (defKeyMap, keyAction)
 
 
@@ -47,19 +47,13 @@ handleMaster mcontent = do
 
   modify (isPromptUp .~ isNothing mcontent)
 
-  ViwrapState { _setCursorPos, _viLine = VILine {..} } <- get
+  ViwrapState { _viHook } <- get
 
   case mcontent of
-    Just content -> writeStdout @fd content
-    Nothing      -> when
-      _setCursorPos
-      do
-        modify (setCursorPos .~ False)
-        writeStdout @fd $ foldMap
-          fromString
-          [ ANSI.cursorBackwardCode $ BS.length _viLineContent - _viCursorPos
-          , fromString ANSI.showCursorCode
-          ]
+      Just content -> modify (prevMasterContent .~ content) >> writeStdout @fd content
+      Nothing      -> modify (prevMasterContent .~ mempty)
+
+  maybe (return ()) (handleVIHook @fd) _viHook
 
 pollMasterFd :: forall fd effs . (ViwrapEff fd effs) => ProcessHandle -> Eff effs ()
 pollMasterFd ph = do
@@ -105,7 +99,7 @@ initialise = do
   (hMaster, hSlave) <- (,) <$> IO.fdToHandle fdMaster <*> IO.fdToHandle fdSlave
 
   let renv :: Env Fd
-      renv = Env { _envCmd         = "python"
+      renv = Env { _envCmd         = "node"
                  , _envCmdArgs     = []
                  , _envPollingRate = 10000
                  , _envBufferSize  = 2048

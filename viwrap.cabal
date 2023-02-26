@@ -30,6 +30,7 @@ flag prod
 library
   exposed-modules:
       Viwrap
+      Viwrap.ANSI
       Viwrap.Pty
       Viwrap.Pty.Handler
       Viwrap.Pty.TermSize
@@ -62,6 +63,7 @@ library
     , bytestring
     , containers
     , freer-simple
+    , megaparsec
     , microlens
     , microlens-th
     , process
@@ -100,6 +102,7 @@ executable viwrap-exe
     , bytestring
     , containers
     , freer-simple
+    , megaparsec
     , microlens
     , microlens-th
     , process
@@ -136,6 +139,7 @@ test-suite viwrap-test
     , bytestring
     , containers
     , freer-simple
+    , megaparsec
     , microlens
     , microlens-th
     , process

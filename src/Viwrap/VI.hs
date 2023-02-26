@@ -1,5 +1,6 @@
 module Viwrap.VI
   ( VIEdit (..)
+  , VIHook (..)
   , VILine (..)
   , VIMode (..)
   , backspace
@@ -30,7 +31,7 @@ data VILine
       , _viCursorPos   :: Int
       , _viMode        :: VIMode
       }
-  deriving stock (Show)
+  deriving stock (Eq, Show)
 
 makeLenses ''VILine
 
@@ -42,6 +43,10 @@ data VIEdit a where
 
 makeEffect ''VIEdit
 
+data VIHook
+  = SyncCursor
+  | TabPressed
+  deriving stock (Eq, Show)
 
 initialVILine :: VILine
 initialVILine = VILine { _viLineContent = mempty, _viCursorPos = 0, _viMode = Insert }
