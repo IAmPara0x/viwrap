@@ -19,7 +19,6 @@ import Viwrap.VI
 
 import Data.ByteString            (ByteString)
 import Data.ByteString            qualified as BS
-import Data.Maybe                 (fromMaybe)
 import Data.String                (fromString)
 import Data.Void                  (Void)
 import Text.Megaparsec            (Parsec, choice, eof, optional, some, runParser)
@@ -153,14 +152,17 @@ handleVIHook SyncCursor = do
 handleVIHook TabPressed = do
   ViwrapState {_prevMasterContent, _viLine=VILine{..}} <- get
 
-  let result = either (error . show) id (runParser autoCompleteP "" _prevMasterContent)
+  if _prevMasterContent == mempty
+  then modify (viHook .~ Nothing)
+  else do
+          let result = either (error . show) id (runParser autoCompleteP "" _prevMasterContent)
+          logM "handleVIHook" ["TabPressed", show $ runParser autoCompleteP "" _prevMasterContent]
+          when (result /= mempty) do
+              modify (viLine %~ updateVILine (_viLineContent <> result))
+              modify (viHook .~ Nothing)
+              r <- _viLine <$> get
+              logM "handleVIHook" ["TabPressed", printf "VILine: %s" $ show r]
 
-  logM "handleVIHook" ["TabPressed", show $ runParser autoCompleteP "" _prevMasterContent]
-  modify (viLine %~ updateVILine (_viLineContent <> result))
-  modify (viHook .~ Nothing)
-
-  r <- _viLine <$> get
-  logM "handleVIHook" ["TabPressed", printf "VILine: %s" $ show r]
 
 
 type Parser = Parsec Void ByteString
