@@ -2,7 +2,7 @@ module Viwrap
   ( launch
   ) where
 
-import Control.Monad              (when, zipWithM_)
+import Control.Monad              (zipWithM_)
 import Control.Monad.Freer        (Eff, runM)
 import Control.Monad.Freer.Reader (ask, runReader)
 import Control.Monad.Freer.State  (evalState, get, modify)
@@ -10,24 +10,26 @@ import Data.ByteString            (ByteString)
 import Data.ByteString            qualified as BS
 import Data.Maybe                 (isNothing)
 
-import Data.String                (fromString)
 import Lens.Micro                 ((&), (.~))
+
 import System.IO                  qualified as IO
 import System.IO                  (BufferMode (..), hSetBuffering)
 import System.Posix               qualified as IO
 import System.Posix               (Fd)
 import System.Posix.Terminal      qualified as Terminal
-
-import System.Console.ANSI        qualified as ANSI
 import System.Posix.Terminal      (TerminalMode (..))
 import System.Process             (ProcessHandle)
+
 import Text.Printf                (printf)
+
+import Viwrap.Logger
+import Viwrap.Logger.Handler      (runLoggerIO)
 import Viwrap.Pty
-import Viwrap.Pty.Handler         (runHandleActIO, runLoggerIO, runLoggerUnit, runProcessIO)
+import Viwrap.Pty.Handler         (runHandleActIO, runProcessIO)
 import Viwrap.Pty.Utils
-import Viwrap.VI                  (VIHook (..), VILine (..))
+import Viwrap.VI                  (VILine (..))
 import Viwrap.VI.Handler          (handleVIHook, handleVITerminal)
-import Viwrap.VI.Utils            (defKeyMap, keyAction)
+import Viwrap.VI.KeyMap           (defKeyMap, keyAction)
 
 
 handleDeadChild :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
@@ -39,26 +41,23 @@ handleDeadChild = do
   let [mMasterContent] = result
 
   case mMasterContent of
-    Nothing        -> logM "childDied" ["Read all the output from slave process, exiting now."]
-    (Just content) -> writeStdout @fd content >> handleDeadChild @fd
+    Nothing      -> logOther ["childDied"] "Read all the output from slave process, exiting now."
+    Just content -> writeStdout @fd content >> handleDeadChild @fd
 
 handleMaster :: forall fd effs . (ViwrapEff fd effs) => Maybe ByteString -> Eff effs ()
 handleMaster mcontent = do
 
   modify (isPromptUp .~ isNothing mcontent)
 
-  ViwrapState { _viHook } <- get
-
   case mcontent of
-      Just content -> modify (prevMasterContent .~ content) >> writeStdout @fd content
-      Nothing      -> modify (prevMasterContent .~ mempty)
-
-  maybe (return ()) (handleVIHook @fd) _viHook
+    Just content -> modify (prevMasterContent .~ content) >> writeStdout @fd content
+    Nothing      -> modify (prevMasterContent .~ mempty)
+  handleVIHook @fd
 
 pollMasterFd :: forall fd effs . (ViwrapEff fd effs) => ProcessHandle -> Eff effs ()
 pollMasterFd ph = do
 
-  let logPoll = logM "pollMasterFd"
+  -- let logPoll = logM "pollMasterFd"
 
   stdin   <- snd <$> getStdin @fd
   hMaster <- snd . _masterPty <$> ask @(Env fd)
@@ -76,15 +75,16 @@ pollMasterFd ph = do
 
         case mExitCode of
           (Just exitCode) -> do
-            logPoll [printf "slave process exited with code: %s" $ show exitCode]
+            logOther ["childDied"] $ printf "slave process exited with code: %s" (show exitCode)
             handleDeadChild @fd
-            modify (childIsDead .~ True)
+            modify (childStatus .~ Dead)
 
           Nothing -> do
 
-            ViwrapState { _isPromptUp } <- get
+            ViwrapState { _isPromptUp, _currentPollRate } <- get
 
-            results <- pselect @fd [hMaster, stdin] $ if _isPromptUp then Infinite else Wait
+            results <- pselect @fd [hMaster, stdin]
+              $ if _isPromptUp then Infinite else Wait _currentPollRate
 
             zipWithM_ ($) [handleMaster @fd, handleStdIn] results
 
@@ -99,7 +99,7 @@ initialise = do
   (hMaster, hSlave) <- (,) <$> IO.fdToHandle fdMaster <*> IO.fdToHandle fdSlave
 
   let renv :: Env Fd
-      renv = Env { _envCmd         = "node"
+      renv = Env { _envCmd         = "racket"
                  , _envCmdArgs     = []
                  , _envPollingRate = 10000
                  , _envBufferSize  = 2048
@@ -119,7 +119,7 @@ initialise = do
 
         return ph
 
-  ph <- runM $ runReader renv $ runLoggerIO setup
+  ph <- runM $ runReader renv $ runLoggerIO [] setup
 
   return (renv, ph)
 
@@ -135,7 +135,7 @@ launch = do
   handleVITerminal @Fd (pollMasterFd @Fd ph)
     & runHandleActIO
     & runProcessIO
-    & runLoggerIO
+    & runLoggerIO [PollCtx, VICtx]
     & evalState initialViwrapState
     & runReader renv
     & runM

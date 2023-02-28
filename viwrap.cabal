@@ -31,12 +31,15 @@ library
   exposed-modules:
       Viwrap
       Viwrap.ANSI
+      Viwrap.Logger
+      Viwrap.Logger.Handler
       Viwrap.Pty
       Viwrap.Pty.Handler
       Viwrap.Pty.TermSize
       Viwrap.Pty.Utils
       Viwrap.VI
       Viwrap.VI.Handler
+      Viwrap.VI.KeyMap
       Viwrap.VI.Utils
   other-modules:
       Paths_viwrap

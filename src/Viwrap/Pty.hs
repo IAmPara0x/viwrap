@@ -1,15 +1,15 @@
 {-# LANGUAGE UndecidableInstances #-}
 module Viwrap.Pty
-  ( Cmd
+  ( Child (..)
   , Env (..)
   , HandleAct (..)
-  , Logger (..)
   , Process (..)
   , Timeout (..)
   , ToHandle
   , ViwrapEff
   , ViwrapState (..)
-  , childIsDead
+  , childStatus
+  , currentPollRate
   , envBufferSize
   , envCmd
   , envCmdArgs
@@ -22,12 +22,11 @@ module Viwrap.Pty
   , isProcessDead
   , isPromptUp
   , logFile
-  , logM
   , masterPty
   , prevMasterContent
   , pselect
   , slavePty
-  , viHook
+  , viHooks
   , viLine
   ) where
 
@@ -35,19 +34,23 @@ import Control.Monad.Freer        (Eff, Member, Members, send)
 import Control.Monad.Freer.Reader (Reader)
 import Control.Monad.Freer.State  (State)
 import Control.Monad.Freer.TH     (makeEffect)
+
 import Data.ByteString            (ByteString)
+import Data.Sequence              (Seq)
+
 import Lens.Micro.TH              (makeLenses)
+
 import System.Exit                (ExitCode)
 import System.IO                  (Handle)
 import System.Posix               (Fd)
 import System.Process             (ProcessHandle)
+
+import Viwrap.Logger              (Logger)
 import Viwrap.VI                  (VIEdit, VIHook, VILine, initialVILine)
 
 
-type Cmd = String
-
 data Timeout
-  = Wait
+  = Wait Int
   | Immediately
   | Infinite
   deriving stock (Show)
@@ -84,19 +87,15 @@ getStdout = send GetStdout
 getStderr :: forall fd effs . (Member (HandleAct fd) effs) => Eff effs (fd, ToHandle fd)
 getStderr = send GetStderr
 
-data Logger a where
-  LogM :: String -> [String] -> Logger ()
-
-makeEffect ''Logger
-
 data Process a where
   IsProcessDead :: ProcessHandle -> Process (Maybe ExitCode)
 
 makeEffect ''Process
 
+
 data Env fd
   = Env
-      { _envCmd         :: Cmd
+      { _envCmd         :: String
       , _envCmdArgs     :: [String]
       , _envPollingRate :: Int
       , _envBufferSize  :: Int
@@ -109,13 +108,19 @@ deriving stock instance (Show fd, Show (ToHandle fd)) => Show (Env fd)
 
 makeLenses ''Env
 
+data Child
+  = Alive
+  | Dead
+  deriving stock (Eq, Show)
+
 data ViwrapState
   = ViwrapState
       { _isPromptUp        :: Bool
-      , _childIsDead       :: Bool
+      , _childStatus       :: Child
       , _prevMasterContent :: ByteString
       , _viLine            :: VILine
-      , _viHook            :: Maybe VIHook
+      , _viHooks           :: Seq VIHook
+      , _currentPollRate   :: Int
       }
   deriving stock (Show)
 
@@ -125,9 +130,10 @@ type ViwrapEff fd effs
   = Members '[HandleAct fd , Logger , Process , Reader (Env fd) , State ViwrapState , VIEdit] effs
 
 initialViwrapState :: ViwrapState
-initialViwrapState = ViwrapState { _childIsDead       = False
+initialViwrapState = ViwrapState { _childStatus       = Alive
                                  , _isPromptUp        = False
                                  , _prevMasterContent = mempty
                                  , _viLine            = initialVILine
-                                 , _viHook            = Nothing
+                                 , _viHooks           = mempty
+                                 , _currentPollRate   = 10000
                                  }

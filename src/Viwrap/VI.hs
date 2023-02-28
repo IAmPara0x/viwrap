@@ -1,5 +1,6 @@
 module Viwrap.VI
-  ( VIEdit (..)
+  ( AutoComplete (..)
+  , VIEdit (..)
   , VIHook (..)
   , VILine (..)
   , VIMode (..)
@@ -36,13 +37,17 @@ data VILine
 makeLenses ''VILine
 
 data VIEdit a where
-  Backspace :: VIEdit VILine
-  MoveLeft :: Int -> VIEdit VILine
-  MoveRight :: Int -> VIEdit VILine
-  InsertBS :: ByteString -> VIEdit VILine
+  Backspace :: VIEdit ()
+  MoveLeft :: Int -> VIEdit ()
+  MoveRight :: Int -> VIEdit ()
+  InsertBS :: ByteString -> VIEdit ()
 
 makeEffect ''VIEdit
 
+data AutoComplete
+  = Completion ByteString
+  | CompletionList
+  deriving stock (Eq, Show)
 data VIHook
   = SyncCursor
   | TabPressed

@@ -13,17 +13,19 @@ module Viwrap.Pty.Utils
 
 import Control.Monad.Freer        (Eff, LastMember, Members, sendM)
 import Control.Monad.Freer.Reader (Reader, ask)
+
 import Data.ByteString            (ByteString)
+
 import System.Posix               (Fd)
+import System.Posix.IO.ByteString qualified as IO
 import System.Posix.Terminal      qualified as Terminal
 import System.Posix.Terminal      (TerminalAttributes, TerminalMode (..), TerminalState)
-
 import System.Process             qualified as Process
 import System.Process             (CreateProcess (..), ProcessHandle, StdStream (..))
 
-import System.Posix.IO.ByteString qualified as IO
-
 import Text.Printf                (printf)
+
+import Viwrap.Logger
 import Viwrap.Pty
 import Viwrap.Pty.TermSize        (TermSize, getTermSize, setTermSize)
 
@@ -38,8 +40,8 @@ installTerminalModes fd modes state = do
   termAttr <- sendM $ Terminal.getTerminalAttributes fd
   let newTermAttr = foldl Terminal.withMode termAttr modes
 
-  logM "installTerminalModes"
-       [printf "Fd: %s, TerminalAttributes: %s" (show fd) (showTerminalModes newTermAttr)]
+  logPty ["installTerminalModes"]
+    $ printf "Fd: %s, TerminalAttributes: %s" (show fd) (showTerminalModes newTermAttr)
 
   sendM $ Terminal.setTerminalAttributes fd newTermAttr state
 
@@ -54,8 +56,8 @@ uninstallTerminalModes fd modes state = do
   termAttr <- sendM $ Terminal.getTerminalAttributes fd
   let newTermAttr = foldl Terminal.withoutMode termAttr modes
 
-  logM "uninstallTerminalModes"
-       [printf "Fd: %s, TerminalAttributes: %s" (show fd) (showTerminalModes newTermAttr)]
+  logPty ["uninstallTerminalModes"]
+    $ printf "Fd: %s, TerminalAttributes: %s" (show fd) (showTerminalModes newTermAttr)
 
   sendM $ Terminal.setTerminalAttributes fd newTermAttr state
 
@@ -100,7 +102,7 @@ showTerminalModes termAttr = printf "Terminal Modes: %s" (show $ foldr acc [] al
 
 
 fdCloseIO :: forall effs . (Members '[Logger] effs, LastMember IO effs) => Fd -> Eff effs ()
-fdCloseIO fd = logM "FdClose" [printf "closing fd: %s" $ show fd] >> sendM (IO.closeFd fd)
+fdCloseIO fd = logPty ["FdClose"] (printf "closing fd: %s" $ show fd) >> sendM (IO.closeFd fd)
 
 forkAndExecCmdIO
   :: forall effs
@@ -108,7 +110,9 @@ forkAndExecCmdIO
   => Eff effs ProcessHandle
 forkAndExecCmdIO = do
   Env { _envCmd, _envCmdArgs, _slavePty = (_, sHandle) } <- ask @(Env Fd)
-  logM "ForkAndExecCmd" [printf "starting process by executing %s cmd" _envCmd]
+
+  logPty ["ForkAndExecCmd"] $ printf "starting process by executing %s cmd" _envCmd
+
   (_, _, _, ph) <-
     sendM $ Process.createProcess_ "slave process" $ (Process.proc _envCmd _envCmdArgs)
       { delegate_ctlc = True
@@ -126,8 +130,10 @@ getTerminalAttrIO
 getTerminalAttrIO fd = do
 
   termAttr <- sendM (Terminal.getTerminalAttributes fd)
-  logM "GetTerminalAttr"
-       [printf "FD: %s, Terminal Attributes: %s" (show fd) (showTerminalModes termAttr)]
+
+  logPty ["GetTerminalAttr"]
+    $ printf "FD: %s, Terminal Attributes: %s" (show fd) (showTerminalModes termAttr)
+
   return termAttr
 
 setTerminalAttrIO
@@ -138,19 +144,16 @@ setTerminalAttrIO
   -> TerminalState
   -> Eff effs ()
 setTerminalAttrIO fd termAttr termState = do
-  logM
-    "SetTerminalAttr"
-    [ printf "Setting terminal attributes: %s, for fd: %d"
-             (showTerminalModes termAttr)
-             (toInteger fd)
-    ]
+  logPty ["SetTerminalAttr"] $ printf "Setting terminal attributes: %s, for fd: %d"
+                                      (showTerminalModes termAttr)
+                                      (toInteger fd)
   sendM (Terminal.setTerminalAttributes fd termAttr termState)
 
 getTermSizeIO
   :: forall effs . (Members '[Logger] effs, LastMember IO effs) => Fd -> Eff effs TermSize
 getTermSizeIO fd = do
   size <- sendM (getTermSize fd)
-  logM "GetTermSize" [printf "FD: %s, TermSize: %s" (show fd) (show size)]
+  logPty ["GetTermSize"] $ printf "FD: %s, TermSize: %s" (show fd) (show size)
   return size
 
 setTermSizeIO
@@ -158,7 +161,7 @@ setTermSizeIO
 setTermSizeIO fdFrom fdTo = do
   sendM (setTermSize fdFrom fdTo)
   newSize <- sendM $ getTermSize fdTo
-  logM "SetTermSize" [printf "FD: %s, New TermSize: %s" (show fdTo) (show newSize)]
+  logPty ["SetTermSize"] $ printf "FD: %s, New TermSize: %s" (show fdTo) (show newSize)
 
 
 writeStdout

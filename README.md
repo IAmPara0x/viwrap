@@ -8,6 +8,7 @@
 - [X] implement a way to detect when a prompt is up (This task will need continuous work as we encounter new edge cases)
 - [X] Start implementing basic vim like editing.
 
+- [ ] Improve Logging
 - [ ] Implement Tab when the cursor is at the middle of the line
 - [ ] Differentiate betweeen \t and space
 - [ ] Find a way to find Jittery cursor.

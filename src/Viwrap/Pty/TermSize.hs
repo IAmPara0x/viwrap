@@ -7,11 +7,14 @@ module Viwrap.Pty.TermSize
   ) where
 
 import Control.Monad         (void)
+
 import Foreign.C.Types       (CInt (..), CUShort)
 import Foreign.Marshal.Alloc (free, malloc)
 import Foreign.Ptr           (Ptr)
 import Foreign.Storable      (Storable (..))
+
 import System.Posix          (Fd (Fd))
+
 import Text.Printf           (printf)
 
 pattern TIOCGWINSZ :: CInt

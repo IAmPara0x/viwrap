@@ -1,6 +1,5 @@
 module Viwrap.VI.Handler
-  ( autoCompleteP
-  , handleNewline
+  ( handleNewline
   , handleTab
   , handleVIHook
   , handleVITerminal
@@ -8,25 +7,33 @@ module Viwrap.VI.Handler
 
 import Control.Monad              (when)
 import Control.Monad.Freer        (Eff, Members, interpret)
-import Control.Monad.Freer.Reader (Reader, asks)
+import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.Freer.State  (State, get, modify)
-
-import Lens.Micro                 ((%~), (.~), (?~), (^.))
-import Text.Printf (printf)
-import Viwrap.Pty
-import Viwrap.Pty.Utils           (writeMaster, writeStdout)
-import Viwrap.VI
 
 import Data.ByteString            (ByteString)
 import Data.ByteString            qualified as BS
-import Data.String                (fromString)
-import Data.Void                  (Void)
-import Text.Megaparsec            (Parsec, choice, eof, optional, some, runParser)
-import Text.Megaparsec.Byte       (printChar, tab)
-import Viwrap.ANSI                (ansiParser)
+import Data.Sequence              (Seq (..))
 
+import Data.String                (fromString)
+
+import Lens.Micro                 ((%~), (.~))
 import System.Console.ANSI        qualified as ANSI
 
+import Text.Megaparsec            (runParser)
+import Text.Printf                (printf)
+
+
+import Viwrap.Logger
+import Viwrap.Pty
+import Viwrap.Pty.Utils           (writeMaster, writeStdout)
+import Viwrap.VI
+import Viwrap.VI.Utils
+  ( addHook
+  , autoCompleteP
+  , eraseAndWrite
+  , removeHook
+  , timeoutAndRemove
+  )
 
 type ViwrapEff' fd effs
   = Members '[HandleAct fd , Logger , Process , Reader (Env fd) , State ViwrapState] effs
@@ -35,20 +42,22 @@ handleVITerminal
   :: forall fd a effs . (ViwrapEff' fd effs) => Eff (VIEdit ': effs) a -> Eff effs a
 handleVITerminal = interpret \case
   Backspace    -> backspaceTerminal @fd
-  MoveLeft  n  -> moveLeftTerminal @fd n >> _viLine <$> get
-  MoveRight n  -> moveRightTerminal @fd n >> _viLine <$> get
+  MoveLeft  n  -> moveLeftTerminal @fd n
+  MoveRight n  -> moveRightTerminal @fd n
   InsertBS  bs -> insertCharTerminal @fd bs
 
 
-insertCharTerminal :: forall fd effs . (ViwrapEff' fd effs) => ByteString -> Eff effs VILine
+insertCharTerminal :: forall fd effs . (ViwrapEff' fd effs) => ByteString -> Eff effs ()
 insertCharTerminal inputBS = do
   VILine {..} <- _viLine <$> get
+  logVI ["insertCharTerminal"]
+    $ printf "inserting %s when cursor is at %d" (show inputBS) _viCursorPos
+  Env { _masterPty = (_, hmaster), _envPollingRate = pollingRate } <- ask @(Env fd)
 
   let (startContent, endContent) = BS.splitAt _viCursorPos _viLineContent
       newLineContent             = mconcat [startContent, inputBS, endContent]
       movePos                    = BS.length _viLineContent - _viCursorPos
 
-  hmaster <- asks @(Env fd) (snd . (^. masterPty))
 
   eraseAndWrite @fd hmaster (BS.length endContent) $ mconcat [inputBS, endContent]
 
@@ -56,11 +65,11 @@ insertCharTerminal inputBS = do
     $ mconcat [fromString $ ANSI.cursorForwardCode movePos, fromString ANSI.hideCursorCode]
 
   modify (viLine %~ updateVILine newLineContent)
-  modify (viHook ?~ SyncCursor)
+  modify (currentPollRate .~ div pollingRate 2)
+  addHook SyncCursor
 
   r <- _viLine <$> get
-  logM "insertCharTerminal" [show r]
-  return r
+  logVI ["insertCharTerminal"] $ show r
 
 moveLeftTerminal :: forall fd effs . (ViwrapEff' fd effs) => Int -> Eff effs ()
 moveLeftTerminal n = do
@@ -69,11 +78,13 @@ moveLeftTerminal n = do
 
   let movePos = min n _viCursorPos
 
+  logVI ["moveLeftTerminal"] $ printf "moving cursor to left by %d" movePos
+
   modify (viLine . viCursorPos %~ (\x -> x - movePos))
   writeStdout @fd (fromString $ ANSI.cursorBackwardCode movePos)
 
   r <- _viLine <$> get
-  logM "moveLeftTerminal" [show r]
+  logVI ["moveLeftTerminal"] $ show r
 
 moveRightTerminal :: forall fd effs . (ViwrapEff' fd effs) => Int -> Eff effs ()
 moveRightTerminal n = do
@@ -81,18 +92,19 @@ moveRightTerminal n = do
 
   let movePos = min n (BS.length _viLineContent - _viCursorPos)
 
+  logVI ["moveRightTerminal"] $ printf "moving cursor to right by %d" movePos
+
   modify (viLine . viCursorPos %~ (+ movePos))
   writeStdout @fd (fromString $ ANSI.cursorForwardCode movePos)
   r <- _viLine <$> get
-  logM "moveRightTerminal" [show r]
+  logVI ["moveRightTerminal"] $ show r
 
-backspaceTerminal :: forall fd effs . (ViwrapEff' fd effs) => Eff effs VILine
+backspaceTerminal :: forall fd effs . (ViwrapEff' fd effs) => Eff effs ()
 backspaceTerminal = do
 
   VILine {..} <- _viLine <$> get
 
-
-  hmaster     <- asks @(Env fd) (snd . (^. masterPty))
+  Env { _masterPty = (_, hmaster), _envPollingRate = pollingRate } <- ask @(Env fd)
 
   let
     finalCursorPos = _viCursorPos - 1
@@ -106,88 +118,75 @@ backspaceTerminal = do
       eraseAndWrite @fd hmaster (endContentLen + 1) endContent
       writeStdout @fd
         $ mconcat [fromString $ ANSI.cursorForwardCode movePos, fromString ANSI.hideCursorCode]
-      modify (viHook ?~ SyncCursor)
+      addHook SyncCursor
+
+      modify (currentPollRate .~ div pollingRate 2)
       modify (viLine %~ updateVILine newLineContent)
 
   when (0 < _viCursorPos) modifyVILine
   r <- _viLine <$> get
-  logM "backspaceTerminal" [show r]
-  return r
+  logVI ["backspaceTerminal"] $ show r
 
 handleNewline :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
 handleNewline = do
   writeMaster @fd "\n"
+  logVI ["handleNewline"] "Received '\\n' setting the VI line to initial state"
   modify (viLine .~ initialVILine)
   modify (isPromptUp .~ False)
-  modify (viHook ?~ SyncCursor)
-
+  addHook SyncCursor
 
 handleTab :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
 handleTab = do
-  VILine {..} <- _viLine <$> get
+  line@VILine {..} <- _viLine <$> get
 
+  logVI ["handleTab"] $ printf "Received '\\t' at %s" (show line)
   when
     (BS.length _viLineContent == _viCursorPos)
     do
-
       writeMaster @fd (BS.singleton 9)
-      modify (viHook ?~ TabPressed)
-      r <- _viLine <$> get
-      logM "handleTab" [show r]
+      addHook TabPressed
 
-handleVIHook :: forall fd effs . (ViwrapEff fd effs) => VIHook -> Eff effs ()
-handleVIHook SyncCursor = do
+handleVIHook :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
+handleVIHook = do
+  hooks <- _viHooks <$> get
 
+  case hooks of
+    Empty              -> return ()
+    (SyncCursor :<| _) -> handleSyncCursor @fd
+    (TabPressed :<| _) -> handleTabPressed @fd
+
+handleSyncCursor :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
+handleSyncCursor = do
   ViwrapState { _viLine = VILine {..}, _prevMasterContent } <- get
+  Env { _envPollingRate } <- ask @(Env fd)
+
+  logVI ["SyncCursor"] $ printf "PrevMasterContent: %s" (show _prevMasterContent)
 
   when
     (_prevMasterContent == mempty)
     do
-      modify (viHook .~ Nothing)
+      removeHook
 
-      writeStdout @fd $ foldMap
-        fromString
-        [ANSI.cursorBackwardCode $ BS.length _viLineContent - _viCursorPos, ANSI.showCursorCode]
+      let movePos = BS.length _viLineContent - _viCursorPos
 
-handleVIHook TabPressed = do
-  ViwrapState {_prevMasterContent, _viLine=VILine{..}} <- get
+      logVI ["SyncCursor"] $ printf "Moving cursor to left by: %d" movePos
 
-  if _prevMasterContent == mempty
-  then modify (viHook .~ Nothing)
-  else do
-          let result = either (error . show) id (runParser autoCompleteP "" _prevMasterContent)
-          logM "handleVIHook" ["TabPressed", show $ runParser autoCompleteP "" _prevMasterContent]
-          when (result /= mempty) do
-              modify (viLine %~ updateVILine (_viLineContent <> result))
-              modify (viHook .~ Nothing)
-              r <- _viLine <$> get
-              logM "handleVIHook" ["TabPressed", printf "VILine: %s" $ show r]
+      modify (currentPollRate .~ _envPollingRate)
+
+      writeStdout @fd $ foldMap fromString [ANSI.cursorBackwardCode movePos, ANSI.showCursorCode]
 
 
+handleTabPressed :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
+handleTabPressed = timeoutAndRemove @fd do
 
-type Parser = Parsec Void ByteString
+  ViwrapState { _prevMasterContent, _viLine = VILine { _viLineContent } } <- get
 
-autoCompleteP :: Parser ByteString
-autoCompleteP = do
-  inputEnded <- optional eof
+  let result = either (error . show) id (runParser autoCompleteP "" _prevMasterContent)
+  logVI ["handleVIHook", "TabPressed"] (show result)
 
-  let dropNonPrintableChar = do
-        ansiseq <- ansiParser
-        if ansiseq == "\n" then return mempty else autoCompleteP
-
-  case inputEnded of
-    Nothing -> do
-      mresult <- optional $ choice [some printChar, (: []) <$> tab]
-      maybe dropNonPrintableChar (return . foldMap BS.singleton) mresult
-    _ -> return mempty
-
-
-eraseAndWrite
-  :: forall fd effs
-   . (Members '[HandleAct fd] effs)
-  => ToHandle fd
-  -> Int
-  -> ByteString
-  -> Eff effs ()
-eraseAndWrite h n content = hWrite @fd h $ mconcat [BS.replicate n 8, content]
-
+  case result of
+    Nothing                     -> return ()
+    (Just CompletionList      ) -> removeHook
+    (Just (Completion content)) -> do
+      removeHook
+      modify (viLine %~ updateVILine (_viLineContent <> content))
