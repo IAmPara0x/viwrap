@@ -5,7 +5,6 @@ module Viwrap.Pty
   , HandleAct (..)
   , Process (..)
   , Timeout (..)
-  , ToHandle
   , ViwrapEff
   , ViwrapState (..)
   , childStatus
@@ -28,9 +27,11 @@ module Viwrap.Pty
   , slavePty
   , viHooks
   , viLine
+  , hCursorPos
+  , hTerminalSize
   ) where
 
-import Control.Monad.Freer        (Eff, Member, Members, send)
+import Control.Monad.Freer        (Members)
 import Control.Monad.Freer.Reader (Reader)
 import Control.Monad.Freer.State  (State)
 import Control.Monad.Freer.TH     (makeEffect)
@@ -55,56 +56,32 @@ data Timeout
   | Infinite
   deriving stock (Show)
 
-type family ToHandle a
-type instance ToHandle Fd = Handle
+data HandleAct a where
+  Pselect :: [Handle] -> Timeout -> HandleAct [Maybe ByteString]
+  HWrite :: Handle -> ByteString -> HandleAct ()
+  GetStdin :: HandleAct (Fd, Handle)
+  GetStdout :: HandleAct (Fd, Handle)
+  GetStderr :: HandleAct (Fd, Handle)
+  HCursorPos :: Handle -> HandleAct (Maybe (Int,Int))
+  HTerminalSize :: Handle -> HandleAct (Maybe (Int,Int))
 
-data HandleAct fd a where
-  Pselect :: [ToHandle fd] -> Timeout -> HandleAct fd [Maybe ByteString]
-  HWrite :: ToHandle fd -> ByteString -> HandleAct fd ()
-  GetStdin :: HandleAct fd (fd, ToHandle fd)
-  GetStdout :: HandleAct fd (fd, ToHandle fd)
-  GetStderr :: HandleAct fd (fd, ToHandle fd)
-
-
-pselect
-  :: forall fd effs
-   . (Member (HandleAct fd) effs)
-  => [ToHandle fd]
-  -> Timeout
-  -> Eff effs [Maybe ByteString]
-pselect handles = send . Pselect @fd handles
-
-hWrite
-  :: forall fd effs . (Member (HandleAct fd) effs) => ToHandle fd -> ByteString -> Eff effs ()
-hWrite handle = send . HWrite @fd handle
-
-getStdin :: forall fd effs . (Member (HandleAct fd) effs) => Eff effs (fd, ToHandle fd)
-getStdin = send GetStdin
-
-getStdout :: forall fd effs . (Member (HandleAct fd) effs) => Eff effs (fd, ToHandle fd)
-getStdout = send GetStdout
-
-getStderr :: forall fd effs . (Member (HandleAct fd) effs) => Eff effs (fd, ToHandle fd)
-getStderr = send GetStderr
+makeEffect ''HandleAct
 
 data Process a where
   IsProcessDead :: ProcessHandle -> Process (Maybe ExitCode)
 
 makeEffect ''Process
 
-
-data Env fd
+data Env
   = Env
       { _envCmd         :: String
       , _envCmdArgs     :: [String]
       , _envPollingRate :: Int
       , _envBufferSize  :: Int
       , _logFile        :: FilePath
-      , _masterPty      :: (fd, ToHandle fd)
-      , _slavePty       :: (fd, ToHandle fd)
-      }
-
-deriving stock instance (Show fd, Show (ToHandle fd)) => Show (Env fd)
+      , _masterPty      :: (Fd, Handle)
+      , _slavePty       :: (Fd, Handle)
+      } deriving stock (Show)
 
 makeLenses ''Env
 
@@ -126,8 +103,8 @@ data ViwrapState
 
 makeLenses ''ViwrapState
 
-type ViwrapEff fd effs
-  = Members '[HandleAct fd , Logger , Process , Reader (Env fd) , State ViwrapState , VIEdit] effs
+type ViwrapEff effs
+  = Members '[HandleAct , Logger , Process , Reader Env , State ViwrapState , VIEdit] effs
 
 initialViwrapState :: ViwrapState
 initialViwrapState = ViwrapState { _childStatus       = Alive

@@ -35,32 +35,32 @@ import Viwrap.VI.Utils
   , timeoutAndRemove
   )
 
-type ViwrapEff' fd effs
-  = Members '[HandleAct fd , Logger , Process , Reader (Env fd) , State ViwrapState] effs
+type ViwrapEff' effs
+  = Members '[HandleAct , Logger , Process , Reader Env , State ViwrapState] effs
 
 handleVITerminal
-  :: forall fd a effs . (ViwrapEff' fd effs) => Eff (VIEdit ': effs) a -> Eff effs a
+  :: (ViwrapEff' effs) => Eff (VIEdit ': effs) a -> Eff effs a
 handleVITerminal = interpret \case
-  Backspace    -> backspaceTerminal @fd
-  MoveLeft  n  -> moveLeftTerminal @fd n
-  MoveRight n  -> moveRightTerminal @fd n
-  InsertBS  bs -> insertCharTerminal @fd bs
+  Backspace    -> backspaceTerminal 
+  MoveLeft  n  -> moveLeftTerminal  n
+  MoveRight n  -> moveRightTerminal  n
+  InsertBS  bs -> insertCharTerminal  bs
 
 
-insertCharTerminal :: forall fd effs . (ViwrapEff' fd effs) => ByteString -> Eff effs ()
+insertCharTerminal :: (ViwrapEff' effs) => ByteString -> Eff effs ()
 insertCharTerminal inputBS = do
   VILine { _viLineContent = z@Zipper {..} } <- _viLine <$> get
 
   logVI ["insertCharTerminal"]
     $ printf "inserting %s when zipper state is %s" (show inputBS) (show z)
 
-  Env { _masterPty = (_, hmaster), _envPollingRate = pollingRate } <- ask @(Env fd)
+  Env { _masterPty = (_, hmaster), _envPollingRate = pollingRate } <- ask
 
   modify (viLine . viLineContent %~ insertZipper inputBS)
 
-  eraseAndWrite @fd hmaster (BS.length _zipperFocus) $ mconcat [inputBS, _zipperFocus]
+  eraseAndWrite  hmaster (BS.length _zipperFocus) $ mconcat [inputBS, _zipperFocus]
 
-  writeStdout @fd $ mconcat
+  writeStdout  $ mconcat
     [fromString $ ANSI.cursorForwardCode (BS.length _zipperFocus), fromString ANSI.hideCursorCode]
 
   modify (currentPollRate .~ div pollingRate 2)
@@ -69,7 +69,7 @@ insertCharTerminal inputBS = do
   r <- _viLine <$> get
   logVI ["insertCharTerminal"] $ show r
 
-moveLeftTerminal :: forall fd effs . (ViwrapEff' fd effs) => Int -> Eff effs ()
+moveLeftTerminal :: (ViwrapEff' effs) => Int -> Eff effs ()
 moveLeftTerminal n = do
 
   VILine { _viLineContent = Zipper {..} } <- _viLine <$> get
@@ -80,12 +80,12 @@ moveLeftTerminal n = do
 
   logVI ["moveLeftTerminal"] $ printf "moving cursor to left by %d" movePos
 
-  writeStdout @fd (fromString $ ANSI.cursorBackwardCode movePos)
+  writeStdout  (fromString $ ANSI.cursorBackwardCode movePos)
 
   r <- _viLine <$> get
   logVI ["moveLeftTerminal"] $ show r
 
-moveRightTerminal :: forall fd effs . (ViwrapEff' fd effs) => Int -> Eff effs ()
+moveRightTerminal :: (ViwrapEff'  effs) => Int -> Eff effs ()
 moveRightTerminal n = do
 
   VILine { _viLineContent = Zipper {..} } <- _viLine <$> get
@@ -96,11 +96,11 @@ moveRightTerminal n = do
 
   logVI ["moveRightTerminal"] $ printf "moving cursor to right by %d" movePos
 
-  writeStdout @fd (fromString $ ANSI.cursorForwardCode movePos)
+  writeStdout  (fromString $ ANSI.cursorForwardCode movePos)
   r <- _viLine <$> get
   logVI ["moveRightTerminal"] $ show r
 
-backspaceTerminal :: forall fd effs . (ViwrapEff' fd effs) => Eff effs ()
+backspaceTerminal :: (ViwrapEff'  effs) => Eff effs ()
 backspaceTerminal = do
 
 
@@ -108,11 +108,11 @@ backspaceTerminal = do
 
   modify (viLine . viLineContent %~ deleteZipper)
 
-  Env { _masterPty = (_, hmaster), _envPollingRate = pollingRate } <- ask @(Env fd)
+  Env { _masterPty = (_, hmaster), _envPollingRate = pollingRate } <- ask
 
-  eraseAndWrite @fd hmaster (BS.length _zipperFocus + 1) _zipperFocus
+  eraseAndWrite  hmaster (BS.length _zipperFocus + 1) _zipperFocus
 
-  writeStdout @fd $ mconcat
+  writeStdout  $ mconcat
     [fromString $ ANSI.cursorForwardCode (BS.length _zipperFocus), fromString ANSI.hideCursorCode]
 
   addHook SyncCursor
@@ -121,45 +121,49 @@ backspaceTerminal = do
   r <- _viLine <$> get
   logVI ["backspaceTerminal"] $ show r
 
-handleNewline :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
+handleNewline :: (ViwrapEff  effs) => Eff effs ()
 handleNewline = do
-  writeMaster @fd "\n"
+  writeMaster  "\n"
   logVI ["handleNewline"] "Received '\\n' setting the VI line to initial state"
   modify (viLine .~ initialVILine)
   modify (isPromptUp .~ False)
   addHook SyncCursor
 
-handleTab :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
+handleTab :: (ViwrapEff  effs) => Eff effs ()
 handleTab = do
+
   line@VILine { _viLineContent = Zipper {..} } <- _viLine <$> get
 
   logVI ["handleTab"] $ printf "Received '\\t' at %s" (show line)
   when
     (_zipperFocus == mempty)
     do
-      writeMaster @fd (BS.singleton 9)
+      writeMaster  (BS.singleton 9)
       addHook TabPressed
 
-handleVIHook :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
+handleVIHook :: (ViwrapEff  effs) => Eff effs ()
 handleVIHook = do
   hooks <- _viHooks <$> get
 
   case hooks of
     Empty              -> return ()
-    (SyncCursor :<| _) -> handleSyncCursor @fd
-    (TabPressed :<| _) -> handleTabPressed @fd
+    (SyncCursor :<| _) -> handleSyncCursor 
+    (TabPressed :<| _) -> handleTabPressed 
 
-handleSyncCursor :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
+handleSyncCursor :: (ViwrapEff  effs) => Eff effs ()
 handleSyncCursor = do
+
+
   ViwrapState { _viLine = VILine { _viLineContent = Zipper {..} }, _prevMasterContent } <- get
 
-  Env { _envPollingRate } <- ask @(Env fd)
 
   logVI ["SyncCursor"] $ printf "PrevMasterContent: %s" (show _prevMasterContent)
 
   when
     (_prevMasterContent == mempty)
     do
+
+      Env { _envPollingRate } <- ask
 
       removeHook
 
@@ -169,11 +173,11 @@ handleSyncCursor = do
 
       modify (currentPollRate .~ _envPollingRate)
 
-      writeStdout @fd $ foldMap fromString [ANSI.cursorBackwardCode movePos, ANSI.showCursorCode]
+      writeStdout  $ foldMap fromString [ANSI.cursorBackwardCode movePos, ANSI.showCursorCode]
 
 
-handleTabPressed :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
-handleTabPressed = timeoutAndRemove @fd do
+handleTabPressed :: (ViwrapEff  effs) => Eff effs ()
+handleTabPressed = timeoutAndRemove  do
 
   ViwrapState { _prevMasterContent, _viLine = VILine { _viLineContent } } <- get
 

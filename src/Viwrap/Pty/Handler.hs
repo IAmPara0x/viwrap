@@ -13,10 +13,10 @@ import Data.ByteString            (ByteString)
 import Data.ByteString            qualified as BS
 
 import System.IO                  (Handle, stderr, stdin, stdout)
-import System.Posix               (Fd)
 import System.Posix.IO.ByteString qualified as IO
 import System.Process             qualified as Process
 import System.Timeout             qualified as IO
+import System.Console.ANSI        qualified as ANSI
 
 import Text.Printf                (printf)
 
@@ -26,9 +26,8 @@ import Viwrap.Pty
 
 -- Hanlder for 'HandleAct'
 runHandleActIO
-  :: forall a effs
-   . (Members '[Logger , Reader (Env Fd)] effs, LastMember IO effs)
-  => Eff (HandleAct Fd ': effs) a
+  :: (Members '[Logger , Reader Env] effs, LastMember IO effs)
+  => Eff (HandleAct ': effs) a
   -> Eff effs a
 runHandleActIO = interpret $ \case
   Pselect handles timeout -> pselectIO handles timeout
@@ -36,16 +35,17 @@ runHandleActIO = interpret $ \case
   GetStdin                -> return (IO.stdInput, stdin)
   GetStdout               -> return (IO.stdOutput, stdout)
   GetStderr               -> return (IO.stdError, stderr)
+  HCursorPos handle       -> sendM $ ANSI.hGetCursorPosition handle
+  HTerminalSize handle    -> sendM $ ANSI.hGetTerminalSize handle
 
 pselectIO
-  :: forall effs
-   . (Members '[Logger , Reader (Env Fd)] effs, LastMember IO effs)
+  :: (Members '[Logger , Reader Env] effs, LastMember IO effs)
   => [Handle]
   -> Timeout
   -> Eff effs [Maybe ByteString]
 pselectIO handles timeout = do
 
-  Env { _envBufferSize } <- ask @(Env Fd)
+  Env { _envBufferSize } <- ask
 
   let asyncReader :: Handle -> IO (Async (Maybe ByteString))
       asyncReader handle = async case timeout of
@@ -79,8 +79,7 @@ pselectIO handles timeout = do
   return results
 
 hWriteIO
-  :: forall effs
-   . (Members '[Logger] effs, LastMember IO effs)
+  :: (Members '[Logger] effs, LastMember IO effs)
   => Handle
   -> ByteString
   -> Eff effs ()
@@ -88,6 +87,6 @@ hWriteIO handle content = do
   logOutput ["FdWrite"] $ printf "writing %s to %s" (show content) (show handle)
   sendM (BS.hPutStr handle content)
 
-runProcessIO :: forall a effs . (LastMember IO effs) => Eff (Process ': effs) a -> Eff effs a
+runProcessIO :: (LastMember IO effs) => Eff (Process ': effs) a -> Eff effs a
 runProcessIO = interpret \case
   IsProcessDead ph -> sendM (Process.getProcessExitCode ph)

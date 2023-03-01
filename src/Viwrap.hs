@@ -15,7 +15,6 @@ import Lens.Micro                 ((&), (.~))
 import System.IO                  qualified as IO
 import System.IO                  (BufferMode (..), hSetBuffering)
 import System.Posix               qualified as IO
-import System.Posix               (Fd)
 import System.Posix.Terminal      qualified as Terminal
 import System.Posix.Terminal      (TerminalMode (..))
 import System.Process             (ProcessHandle)
@@ -32,41 +31,39 @@ import Viwrap.VI.Handler          (handleVIHook, handleVITerminal)
 import Viwrap.VI.KeyMap           (defKeyMap, keyAction)
 
 
-handleDeadChild :: forall fd effs . (ViwrapEff fd effs) => Eff effs ()
+handleDeadChild :: ViwrapEff effs => Eff effs ()
 handleDeadChild = do
 
-  hmaster <- snd . _masterPty <$> ask @(Env fd)
-  result  <- pselect @fd [hmaster] Immediately
+  hmaster <- snd . _masterPty <$> ask
+  result  <- pselect [hmaster] Immediately
 
   let [mMasterContent] = result
 
   case mMasterContent of
     Nothing      -> logOther ["childDied"] "Read all the output from slave process, exiting now."
-    Just content -> writeStdout @fd content >> handleDeadChild @fd
+    Just content -> writeStdout content >> handleDeadChild
 
-handleMaster :: forall fd effs . (ViwrapEff fd effs) => Maybe ByteString -> Eff effs ()
+handleMaster :: ViwrapEff effs => Maybe ByteString -> Eff effs ()
 handleMaster mcontent = do
 
   modify (isPromptUp .~ isNothing mcontent)
 
   case mcontent of
-    Just content -> modify (prevMasterContent .~ content) >> writeStdout @fd content
+    Just content -> modify (prevMasterContent .~ content) >> writeStdout content
     Nothing      -> modify (prevMasterContent .~ mempty)
-  handleVIHook @fd
+  handleVIHook
 
-pollMasterFd :: forall fd effs . (ViwrapEff fd effs) => ProcessHandle -> Eff effs ()
+pollMasterFd :: forall effs. ViwrapEff effs => ProcessHandle -> Eff effs ()
 pollMasterFd ph = do
 
-  -- let logPoll = logM "pollMasterFd"
-
-  stdin   <- snd <$> getStdin @fd
-  hMaster <- snd . _masterPty <$> ask @(Env fd)
+  stdin   <- snd <$> getStdin
+  hMaster <- snd . _masterPty <$> ask
 
   let handleStdIn :: Maybe ByteString -> Eff effs ()
       handleStdIn Nothing        = return ()
       handleStdIn (Just content) = do
         VILine {..} <- _viLine <$> get
-        keyAction @fd (defKeyMap @fd) _viMode $ BS.head content
+        keyAction defKeyMap _viMode $ BS.head content
 
       poll :: Eff effs ()
       poll = do
@@ -76,32 +73,32 @@ pollMasterFd ph = do
         case mExitCode of
           (Just exitCode) -> do
             logOther ["childDied"] $ printf "slave process exited with code: %s" (show exitCode)
-            handleDeadChild @fd
+            handleDeadChild
             modify (childStatus .~ Dead)
 
           Nothing -> do
 
             ViwrapState { _isPromptUp, _currentPollRate } <- get
 
-            results <- pselect @fd [hMaster, stdin]
+            results <- pselect [hMaster, stdin]
               $ if _isPromptUp then Infinite else Wait _currentPollRate
 
-            zipWithM_ ($) [handleMaster @fd, handleStdIn] results
+            zipWithM_ ($) [handleMaster , handleStdIn] results
 
             poll
   poll
 
-initialise :: IO (Env Fd, ProcessHandle)
+initialise :: IO (Env, ProcessHandle)
 initialise = do
   (fdMaster, fdSlave) <- Terminal.openPseudoTerminal
   hSetBuffering IO.stdin  NoBuffering
   hSetBuffering IO.stdout NoBuffering
   (hMaster, hSlave) <- (,) <$> IO.fdToHandle fdMaster <*> IO.fdToHandle fdSlave
 
-  let renv :: Env Fd
+  let renv :: Env
       renv = Env { _envCmd         = "racket"
                  , _envCmdArgs     = []
-                 , _envPollingRate = 10000
+                 , _envPollingRate = 20000
                  , _envBufferSize  = 2048
                  , _logFile        = "log.txt"
                  , _masterPty      = (fdMaster, hMaster)
@@ -123,7 +120,7 @@ initialise = do
 
   return (renv, ph)
 
-cleanup :: Env Fd -> IO ()
+cleanup :: Env -> IO ()
 cleanup Env {..} = do
   IO.hClose (snd _masterPty)
   IO.hClose (snd _slavePty)
@@ -132,7 +129,7 @@ launch :: IO ()
 launch = do
   (renv, ph) <- initialise
 
-  handleVITerminal @Fd (pollMasterFd @Fd ph)
+  handleVITerminal (pollMasterFd ph)
     & runHandleActIO
     & runProcessIO
     & runLoggerIO [PollCtx, VICtx]

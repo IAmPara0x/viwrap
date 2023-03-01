@@ -21,13 +21,13 @@ import Viwrap.VI.Handler         (handleNewline, handleTab)
 import Viwrap.VI.Utils           (moveToBeginning, moveToEnd, toMode)
 
 
-type KeyMap fd effs = ViwrapEff fd effs => Map (VIMode, Word8) (Eff effs ())
+type KeyMap effs = ViwrapEff effs => Map (VIMode, Word8) (Eff effs ())
 
-defKeyMap :: forall fd effs . KeyMap fd effs
+defKeyMap :: KeyMap effs
 defKeyMap = Map.fromList
-  [ ((Normal, 10) , handleNewline @fd)
-  , ((Normal, 65) , moveToEnd @fd >> toMode @fd Insert)
-  , ((Normal, 73) , moveToBeginning @fd >> toMode @fd Insert)
+  [ ((Normal, 10) , handleNewline)
+  , ((Normal, 65) , moveToEnd >> toMode Insert)
+  , ((Normal, 73) , moveToBeginning >> toMode Insert)
   -- , ((Normal, 99), writeMaster @fd $ mconcat [BS.singleton 3])
   , ((Normal, 100), void backspace)
   , ((Normal, 104), void $ moveLeft 1)
@@ -36,15 +36,15 @@ defKeyMap = Map.fromList
   -- , ((Normal, 119), moveToNextWord @fd)
 
        -- Insert Mode KeyMap
-  , ((Insert, 9)  , handleTab @fd)
-  , ((Insert, 10) , handleNewline @fd)
+  , ((Insert, 9)  , handleTab)
+  , ((Insert, 10) , handleNewline)
   , ((Insert, 27), modify (viLine . viMode .~ Normal) >> moveLeft 1)
   , ((Insert, 127), void backspace)
   ]
 
 
 keyAction
-  :: forall fd effs . (ViwrapEff fd effs) => KeyMap fd effs -> VIMode -> Word8 -> Eff effs ()
+  :: (ViwrapEff effs) => KeyMap effs -> VIMode -> Word8 -> Eff effs ()
 keyAction keymap mode key = do
   case Map.lookup (mode, key) keymap of
     Just eff -> eff

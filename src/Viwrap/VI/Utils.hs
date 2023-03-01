@@ -23,10 +23,10 @@ import Data.ByteString           qualified as BS
 import Data.Sequence             ((|>))
 import Data.Sequence             qualified as Seq
 import Data.Void                 (Void)
+import System.IO                  (Handle)
 
 import Text.Megaparsec           (Parsec, choice, eof, optional, some)
 import Text.Megaparsec.Byte      (printChar, tab)
-
 import Text.Printf               (printf)
 import Viwrap.ANSI               (ansiParser)
 import Viwrap.Logger
@@ -34,12 +34,12 @@ import Viwrap.Pty
 import Viwrap.VI
 
 
-moveToBeginning :: ViwrapEff fd effs => Eff effs ()
+moveToBeginning :: ViwrapEff effs => Eff effs ()
 moveToBeginning = do
   VILine {..} <- _viLine <$> get
   void $ moveLeft (BS.length $ _viLineContent ^. zipperCrumbs)
 
-moveToEnd :: ViwrapEff fd effs => Eff effs ()
+moveToEnd :: ViwrapEff effs => Eff effs ()
 moveToEnd = do
   VILine {..} <- _viLine <$> get
   void $ moveRight (BS.length $ _viLineContent ^. zipperFocus)
@@ -53,7 +53,7 @@ moveToEnd = do
 
 --   void $ moveRight (BS.length content - BS.length x + 1)
 
-toMode :: forall fd effs . (ViwrapEff fd effs) => VIMode -> Eff effs ()
+toMode :: ViwrapEff effs => VIMode -> Eff effs ()
 toMode mode = modify (viLine . viMode .~ mode)
 
 type Parser = Parsec Void ByteString
@@ -73,24 +73,23 @@ autoCompleteP = do
     _ -> return Nothing
 
 eraseAndWrite
-  :: forall fd effs
-   . (Members '[HandleAct fd] effs)
-  => ToHandle fd
+  :: (Members '[HandleAct] effs)
+  => Handle
   -> Int
   -> ByteString
   -> Eff effs ()
-eraseAndWrite h n content = hWrite @fd h $ mconcat [BS.replicate n 8, content]
+eraseAndWrite h n content = hWrite h $ mconcat [BS.replicate n 8, content]
 
-addHook :: forall effs . (Members '[State ViwrapState , Logger] effs) => VIHook -> Eff effs ()
+addHook :: (Members '[State ViwrapState , Logger] effs) => VIHook -> Eff effs ()
 addHook hook = do
   hooks <- _viHooks <$> get
   logVI ["addHook"] $ printf "Adding %s to %s" (show hook) (show hooks)
   modify (viHooks %~ (|> hook))
 
-removeHook :: forall effs . (Members '[State ViwrapState] effs) => Eff effs ()
+removeHook :: (Members '[State ViwrapState] effs) => Eff effs ()
 removeHook = modify (viHooks %~ Seq.drop 1)
 
-timeoutAndRemove :: forall fd effs . (ViwrapEff fd effs) => Eff effs () -> Eff effs ()
+timeoutAndRemove :: (ViwrapEff effs) => Eff effs () -> Eff effs ()
 timeoutAndRemove runHook = do
   content <- _prevMasterContent <$> get
   if content == mempty then removeHook else runHook

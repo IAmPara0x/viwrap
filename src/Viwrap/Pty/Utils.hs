@@ -30,8 +30,7 @@ import Viwrap.Pty
 import Viwrap.Pty.TermSize        (TermSize, getTermSize, setTermSize)
 
 installTerminalModes
-  :: forall effs
-   . (Members '[Logger] effs, LastMember IO effs)
+  :: (Members '[Logger] effs, LastMember IO effs)
   => Fd
   -> [TerminalMode]
   -> TerminalState
@@ -46,8 +45,7 @@ installTerminalModes fd modes state = do
   sendM $ Terminal.setTerminalAttributes fd newTermAttr state
 
 uninstallTerminalModes
-  :: forall effs
-   . (Members '[Logger] effs, LastMember IO effs)
+  :: (Members '[Logger] effs, LastMember IO effs)
   => Fd
   -> [TerminalMode]
   -> TerminalState
@@ -101,15 +99,14 @@ showTerminalModes termAttr = printf "Terminal Modes: %s" (show $ foldr acc [] al
                          | otherwise                           = names
 
 
-fdCloseIO :: forall effs . (Members '[Logger] effs, LastMember IO effs) => Fd -> Eff effs ()
+fdCloseIO :: (Members '[Logger] effs, LastMember IO effs) => Fd -> Eff effs ()
 fdCloseIO fd = logPty ["FdClose"] (printf "closing fd: %s" $ show fd) >> sendM (IO.closeFd fd)
 
 forkAndExecCmdIO
-  :: forall effs
-   . (Members '[Logger , Reader (Env Fd)] effs, LastMember IO effs)
+  :: (Members '[Logger , Reader Env] effs, LastMember IO effs)
   => Eff effs ProcessHandle
 forkAndExecCmdIO = do
-  Env { _envCmd, _envCmdArgs, _slavePty = (_, sHandle) } <- ask @(Env Fd)
+  Env { _envCmd, _envCmdArgs, _slavePty = (_, sHandle) } <- ask
 
   logPty ["ForkAndExecCmd"] $ printf "starting process by executing %s cmd" _envCmd
 
@@ -123,8 +120,7 @@ forkAndExecCmdIO = do
   return ph
 
 getTerminalAttrIO
-  :: forall effs
-   . (Members '[Logger] effs, LastMember IO effs)
+  :: (Members '[Logger] effs, LastMember IO effs)
   => Fd
   -> Eff effs TerminalAttributes
 getTerminalAttrIO fd = do
@@ -137,8 +133,7 @@ getTerminalAttrIO fd = do
   return termAttr
 
 setTerminalAttrIO
-  :: forall effs
-   . (Members '[Logger] effs, LastMember IO effs)
+  :: (Members '[Logger] effs, LastMember IO effs)
   => Fd
   -> TerminalAttributes
   -> TerminalState
@@ -150,14 +145,14 @@ setTerminalAttrIO fd termAttr termState = do
   sendM (Terminal.setTerminalAttributes fd termAttr termState)
 
 getTermSizeIO
-  :: forall effs . (Members '[Logger] effs, LastMember IO effs) => Fd -> Eff effs TermSize
+  :: (Members '[Logger] effs, LastMember IO effs) => Fd -> Eff effs TermSize
 getTermSizeIO fd = do
   size <- sendM (getTermSize fd)
   logPty ["GetTermSize"] $ printf "FD: %s, TermSize: %s" (show fd) (show size)
   return size
 
 setTermSizeIO
-  :: forall effs . (Members '[Logger] effs, LastMember IO effs) => Fd -> Fd -> Eff effs ()
+  ::(Members '[Logger] effs, LastMember IO effs) => Fd -> Fd -> Eff effs ()
 setTermSizeIO fdFrom fdTo = do
   sendM (setTermSize fdFrom fdTo)
   newSize <- sendM $ getTermSize fdTo
@@ -165,13 +160,13 @@ setTermSizeIO fdFrom fdTo = do
 
 
 writeStdout
-  :: forall fd effs . (Members '[Reader (Env fd) , HandleAct fd] effs) => ByteString -> Eff effs ()
+  :: (Members '[Reader Env , HandleAct] effs) => ByteString -> Eff effs ()
 writeStdout content = do
-  stdout <- snd <$> getStdout @fd
-  hWrite @fd stdout content
+  stdout <- snd <$> getStdout
+  hWrite stdout content
 
 writeMaster
-  :: forall fd effs . (Members '[Reader (Env fd) , HandleAct fd] effs) => ByteString -> Eff effs ()
+  :: (Members '[Reader Env , HandleAct] effs) => ByteString -> Eff effs ()
 writeMaster content = do
-  hmaster <- snd . _masterPty <$> ask @(Env fd)
-  hWrite @fd hmaster content
+  hmaster <- snd . _masterPty <$> ask
+  hWrite hmaster content
