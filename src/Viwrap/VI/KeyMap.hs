@@ -18,7 +18,7 @@ import Lens.Micro                ((.~))
 import Viwrap.Pty
 import Viwrap.VI
 import Viwrap.VI.Handler         (handleNewline, handleTab)
-import Viwrap.VI.Utils           (moveToBeginning, moveToEnd, moveToNextWord, toMode)
+import Viwrap.VI.Utils           (moveToBeginning, moveToEnd, toMode)
 
 
 type KeyMap fd effs = ViwrapEff fd effs => Map (VIMode, Word8) (Eff effs ())
@@ -33,12 +33,12 @@ defKeyMap = Map.fromList
   , ((Normal, 104), void $ moveLeft 1)
   , ((Normal, 105), modify (viLine . viMode .~ Insert))
   , ((Normal, 108), void $ moveRight 1)
-  , ((Normal, 119), moveToNextWord @fd)
+  -- , ((Normal, 119), moveToNextWord @fd)
 
        -- Insert Mode KeyMap
   , ((Insert, 9)  , handleTab @fd)
   , ((Insert, 10) , handleNewline @fd)
-  , ((Insert, 27) , modify (viLine . viMode .~ Normal))
+  , ((Insert, 27), modify (viLine . viMode .~ Normal) >> moveLeft 1)
   , ((Insert, 127), void backspace)
   ]
 

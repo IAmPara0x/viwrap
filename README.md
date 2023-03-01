@@ -36,3 +36,5 @@
 - [ ] How to identify when the prompt is up?
 
 - [X] How to determine when to supperese output from hmaster and when not to?
+
+- [ ] Check If we can implement batching such that we take multiple input at a time and process it.

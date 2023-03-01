@@ -4,7 +4,7 @@ module Viwrap.VI.Utils
   , eraseAndWrite
   , moveToBeginning
   , moveToEnd
-  , moveToNextWord
+    -- , moveToNextWord
   , removeHook
   , timeoutAndRemove
   , toMode
@@ -14,12 +14,12 @@ import Control.Monad             (void)
 import Control.Monad.Freer       (Eff, Members)
 import Control.Monad.Freer.State (State, get, modify)
 
-import Lens.Micro                ((%~), (.~))
+import Lens.Micro                ((%~), (.~), (^.))
 
 import Data.ByteString           (ByteString)
 import Data.ByteString           qualified as BS
-import Data.ByteString.Internal  qualified as BS
-import Data.Char                 (isAlphaNum)
+-- import Data.ByteString.Internal  qualified as BS
+-- import Data.Char                 (isAlphaNum)
 import Data.Sequence             ((|>))
 import Data.Sequence             qualified as Seq
 import Data.Void                 (Void)
@@ -37,21 +37,21 @@ import Viwrap.VI
 moveToBeginning :: ViwrapEff fd effs => Eff effs ()
 moveToBeginning = do
   VILine {..} <- _viLine <$> get
-  void $ moveLeft _viCursorPos
+  void $ moveLeft (BS.length $ _viLineContent ^. zipperCrumbs)
 
 moveToEnd :: ViwrapEff fd effs => Eff effs ()
 moveToEnd = do
   VILine {..} <- _viLine <$> get
-  void $ moveRight (BS.length _viLineContent - _viCursorPos)
+  void $ moveRight (BS.length $ _viLineContent ^. zipperFocus)
 
-moveToNextWord :: ViwrapEff fd effs => Eff effs ()
-moveToNextWord = do
-  VILine {..} <- _viLine <$> get
+-- moveToNextWord :: ViwrapEff fd effs => Eff effs ()
+-- moveToNextWord = do
+--   VILine {..} <- _viLine <$> get
 
-  let content = BS.drop _viCursorPos _viLineContent
-      x       = BS.dropWhile (isAlphaNum . BS.w2c) content
+--   let content = BS.drop _viCursorPos _viLineContent
+--       x       = BS.dropWhile (isAlphaNum . BS.w2c) content
 
-  void $ moveRight (BS.length content - BS.length x + 1)
+--   void $ moveRight (BS.length content - BS.length x + 1)
 
 toMode :: forall fd effs . (ViwrapEff fd effs) => VIMode -> Eff effs ()
 toMode mode = modify (viLine . viMode .~ mode)
