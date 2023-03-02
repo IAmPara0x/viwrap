@@ -103,8 +103,7 @@ fdCloseIO :: (Members '[Logger] effs, LastMember IO effs) => Fd -> Eff effs ()
 fdCloseIO fd = logPty ["FdClose"] (printf "closing fd: %s" $ show fd) >> sendM (IO.closeFd fd)
 
 forkAndExecCmdIO
-  :: (Members '[Logger , Reader Env] effs, LastMember IO effs)
-  => Eff effs ProcessHandle
+  :: (Members '[Logger , Reader Env] effs, LastMember IO effs) => Eff effs ProcessHandle
 forkAndExecCmdIO = do
   Env { _envCmd, _envCmdArgs, _slavePty = (_, sHandle) } <- ask
 
@@ -120,9 +119,7 @@ forkAndExecCmdIO = do
   return ph
 
 getTerminalAttrIO
-  :: (Members '[Logger] effs, LastMember IO effs)
-  => Fd
-  -> Eff effs TerminalAttributes
+  :: (Members '[Logger] effs, LastMember IO effs) => Fd -> Eff effs TerminalAttributes
 getTerminalAttrIO fd = do
 
   termAttr <- sendM (Terminal.getTerminalAttributes fd)
@@ -144,29 +141,25 @@ setTerminalAttrIO fd termAttr termState = do
                                       (toInteger fd)
   sendM (Terminal.setTerminalAttributes fd termAttr termState)
 
-getTermSizeIO
-  :: (Members '[Logger] effs, LastMember IO effs) => Fd -> Eff effs TermSize
+getTermSizeIO :: (Members '[Logger] effs, LastMember IO effs) => Fd -> Eff effs TermSize
 getTermSizeIO fd = do
   size <- sendM (getTermSize fd)
   logPty ["GetTermSize"] $ printf "FD: %s, TermSize: %s" (show fd) (show size)
   return size
 
-setTermSizeIO
-  ::(Members '[Logger] effs, LastMember IO effs) => Fd -> Fd -> Eff effs ()
+setTermSizeIO :: (Members '[Logger] effs, LastMember IO effs) => Fd -> Fd -> Eff effs ()
 setTermSizeIO fdFrom fdTo = do
   sendM (setTermSize fdFrom fdTo)
   newSize <- sendM $ getTermSize fdTo
   logPty ["SetTermSize"] $ printf "FD: %s, New TermSize: %s" (show fdTo) (show newSize)
 
 
-writeStdout
-  :: (Members '[Reader Env , HandleAct] effs) => ByteString -> Eff effs ()
+writeStdout :: (Members '[Reader Env , HandleAct] effs) => ByteString -> Eff effs ()
 writeStdout content = do
   stdout <- snd <$> getStdout
   hWrite stdout content
 
-writeMaster
-  :: (Members '[Reader Env , HandleAct] effs) => ByteString -> Eff effs ()
+writeMaster :: (Members '[Reader Env , HandleAct] effs) => ByteString -> Eff effs ()
 writeMaster content = do
   hmaster <- snd . _masterPty <$> ask
   hWrite hmaster content

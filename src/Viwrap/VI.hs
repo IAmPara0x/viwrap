@@ -67,7 +67,6 @@ insertZipper content Zipper {..} = Zipper _zipperFocus (BS.reverse content <> _z
 deleteZipper :: Zipper -> Zipper
 deleteZipper = zipperCrumbs %~ BS.drop 1
 
-
 data VILine
   = VILine
       { _viLineContent :: Zipper

@@ -16,6 +16,8 @@ module Viwrap.Pty
   , getStderr
   , getStdin
   , getStdout
+  , hCursorPos
+  , hTerminalSize
   , hWrite
   , initialViwrapState
   , isProcessDead
@@ -27,8 +29,6 @@ module Viwrap.Pty
   , slavePty
   , viHooks
   , viLine
-  , hCursorPos
-  , hTerminalSize
   ) where
 
 import Control.Monad.Freer        (Members)
@@ -62,8 +62,8 @@ data HandleAct a where
   GetStdin :: HandleAct (Fd, Handle)
   GetStdout :: HandleAct (Fd, Handle)
   GetStderr :: HandleAct (Fd, Handle)
-  HCursorPos :: Handle -> HandleAct (Maybe (Int,Int))
-  HTerminalSize :: Handle -> HandleAct (Maybe (Int,Int))
+  HCursorPos :: Handle -> HandleAct (Maybe (Int, Int))
+  HTerminalSize :: Handle -> HandleAct (Maybe (Int, Int))
 
 makeEffect ''HandleAct
 
@@ -81,7 +81,8 @@ data Env
       , _logFile        :: FilePath
       , _masterPty      :: (Fd, Handle)
       , _slavePty       :: (Fd, Handle)
-      } deriving stock (Show)
+      }
+  deriving stock (Show)
 
 makeLenses ''Env
 

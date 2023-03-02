@@ -53,7 +53,7 @@ handleMaster mcontent = do
     Nothing      -> modify (prevMasterContent .~ mempty)
   handleVIHook
 
-pollMasterFd :: forall effs. ViwrapEff effs => ProcessHandle -> Eff effs ()
+pollMasterFd :: forall effs . ViwrapEff effs => ProcessHandle -> Eff effs ()
 pollMasterFd ph = do
 
   stdin   <- snd <$> getStdin
@@ -83,7 +83,7 @@ pollMasterFd ph = do
             results <- pselect [hMaster, stdin]
               $ if _isPromptUp then Infinite else Wait _currentPollRate
 
-            zipWithM_ ($) [handleMaster , handleStdIn] results
+            zipWithM_ ($) [handleMaster, handleStdIn] results
 
             poll
   poll

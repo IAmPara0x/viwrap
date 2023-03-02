@@ -12,11 +12,11 @@ import Control.Monad.Freer.Reader (Reader, ask)
 import Data.ByteString            (ByteString)
 import Data.ByteString            qualified as BS
 
+import System.Console.ANSI        qualified as ANSI
 import System.IO                  (Handle, stderr, stdin, stdout)
 import System.Posix.IO.ByteString qualified as IO
 import System.Process             qualified as Process
 import System.Timeout             qualified as IO
-import System.Console.ANSI        qualified as ANSI
 
 import Text.Printf                (printf)
 
@@ -35,7 +35,7 @@ runHandleActIO = interpret $ \case
   GetStdin                -> return (IO.stdInput, stdin)
   GetStdout               -> return (IO.stdOutput, stdout)
   GetStderr               -> return (IO.stdError, stderr)
-  HCursorPos handle       -> sendM $ ANSI.hGetCursorPosition handle
+  HCursorPos    handle    -> sendM $ ANSI.hGetCursorPosition handle
   HTerminalSize handle    -> sendM $ ANSI.hGetTerminalSize handle
 
 pselectIO
@@ -78,11 +78,7 @@ pselectIO handles timeout = do
   logSelect $ printf "Poll result: %s" (show fdAndContents)
   return results
 
-hWriteIO
-  :: (Members '[Logger] effs, LastMember IO effs)
-  => Handle
-  -> ByteString
-  -> Eff effs ()
+hWriteIO :: (Members '[Logger] effs, LastMember IO effs) => Handle -> ByteString -> Eff effs ()
 hWriteIO handle content = do
   logOutput ["FdWrite"] $ printf "writing %s to %s" (show content) (show handle)
   sendM (BS.hPutStr handle content)

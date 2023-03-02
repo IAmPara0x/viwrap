@@ -27,20 +27,20 @@ data Logger a where
 
 makeEffect ''Logger
 
-logPty ::  Member Logger effs => [String] -> String -> Eff effs ()
+logPty :: Member Logger effs => [String] -> String -> Eff effs ()
 logPty = logM PtyCtx . ("PTY" :)
 
-logPoll ::  Member Logger effs => [String] -> String -> Eff effs ()
+logPoll :: Member Logger effs => [String] -> String -> Eff effs ()
 logPoll = logM PollCtx . ("Poll" :)
 
-logInput ::  Member Logger effs => [String] -> String -> Eff effs ()
+logInput :: Member Logger effs => [String] -> String -> Eff effs ()
 logInput = logM InputCtx . ("Input" :)
 
-logOutput ::  Member Logger effs => [String] -> String -> Eff effs ()
+logOutput :: Member Logger effs => [String] -> String -> Eff effs ()
 logOutput = logM OutputCtx . ("Output" :)
 
-logVI ::  Member Logger effs => [String] -> String -> Eff effs ()
+logVI :: Member Logger effs => [String] -> String -> Eff effs ()
 logVI = logM VICtx . ("VI" :)
 
-logOther ::  Member Logger effs => [String] -> String -> Eff effs ()
+logOther :: Member Logger effs => [String] -> String -> Eff effs ()
 logOther = logM OtherCtx . ("Other" :)

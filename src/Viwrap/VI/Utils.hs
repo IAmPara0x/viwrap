@@ -5,32 +5,39 @@ module Viwrap.VI.Utils
   , moveToBeginning
   , moveToEnd
     -- , moveToNextWord
+  , Cursor (..)
+  , moveCursor
   , removeHook
   , timeoutAndRemove
   , toMode
   ) where
 
-import Control.Monad             (void)
-import Control.Monad.Freer       (Eff, Members)
-import Control.Monad.Freer.State (State, get, modify)
+import Control.Monad              (void)
+import Control.Monad.Freer        (Eff, Members)
+import Control.Monad.Freer.Reader (Reader)
+import Control.Monad.Freer.State  (State, get, modify)
 
-import Lens.Micro                ((%~), (.~), (^.))
+import Lens.Micro                 ((%~), (.~), (^.))
 
-import Data.ByteString           (ByteString)
-import Data.ByteString           qualified as BS
+import Data.ByteString            (ByteString)
+import Data.ByteString            qualified as BS
+import Data.Maybe                 (fromJust)
+import Data.Sequence              ((|>))
+import Data.Sequence              qualified as Seq
 -- import Data.ByteString.Internal  qualified as BS
 -- import Data.Char                 (isAlphaNum)
-import Data.Sequence             ((|>))
-import Data.Sequence             qualified as Seq
-import Data.Void                 (Void)
+import Data.String                (fromString)
+import Data.Void                  (Void)
+import System.Console.ANSI        qualified as ANSI
 import System.IO                  (Handle)
 
-import Text.Megaparsec           (Parsec, choice, eof, optional, some)
-import Text.Megaparsec.Byte      (printChar, tab)
-import Text.Printf               (printf)
-import Viwrap.ANSI               (ansiParser)
+import Text.Megaparsec            (Parsec, choice, eof, optional, some)
+import Text.Megaparsec.Byte       (printChar, tab)
+import Text.Printf                (printf)
+import Viwrap.ANSI                (ansiParser)
 import Viwrap.Logger
 import Viwrap.Pty
+import Viwrap.Pty.Utils           (writeStdout)
 import Viwrap.VI
 
 
@@ -72,12 +79,7 @@ autoCompleteP = do
       maybe dropNonPrintableChar (return . Just . Completion . foldMap BS.singleton) mresult
     _ -> return Nothing
 
-eraseAndWrite
-  :: (Members '[HandleAct] effs)
-  => Handle
-  -> Int
-  -> ByteString
-  -> Eff effs ()
+eraseAndWrite :: (Members '[HandleAct] effs) => Handle -> Int -> ByteString -> Eff effs ()
 eraseAndWrite h n content = hWrite h $ mconcat [BS.replicate n 8, content]
 
 addHook :: (Members '[State ViwrapState , Logger] effs) => VIHook -> Eff effs ()
@@ -94,3 +96,33 @@ timeoutAndRemove runHook = do
   content <- _prevMasterContent <$> get
   if content == mempty then removeHook else runHook
 
+
+data Cursor
+  = Forward Int
+  | Backward Int
+  deriving stock (Eq, Show)
+
+moveCursor :: Members '[HandleAct , Logger , Reader Env] effs => Cursor -> Eff effs ()
+moveCursor cursor = do
+  stdout    <- snd <$> getStdout
+  cursorPos <- hCursorPos stdout
+  termsize  <- hTerminalSize stdout
+
+  -- TODO: find a better way to solve this.
+  let movePos = case cursor of
+        Forward  n -> n
+        Backward n -> n
+
+      (_       , width    ) = fromJust termsize
+      (row     , col      ) = fromJust cursorPos
+      (vertMove, horizMove) = (movePos `div` width, movePos `mod` width)
+      (nrow    , ncol     ) = case cursor of
+
+        (Forward _)
+          | col + horizMove >= width -> (row + vertMove + 1, (col + horizMove) `mod` width)
+          | otherwise                -> (row + vertMove, col + horizMove)
+
+        (Backward _) | col >= horizMove -> (row - vertMove, col - horizMove)
+                     | otherwise        -> (row - vertMove - 1, col + width - horizMove)
+
+  writeStdout (fromString $ ANSI.setCursorPositionCode nrow ncol)

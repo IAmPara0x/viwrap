@@ -43,8 +43,7 @@ defKeyMap = Map.fromList
   ]
 
 
-keyAction
-  :: (ViwrapEff effs) => KeyMap effs -> VIMode -> Word8 -> Eff effs ()
+keyAction :: (ViwrapEff effs) => KeyMap effs -> VIMode -> Word8 -> Eff effs ()
 keyAction keymap mode key = do
   case Map.lookup (mode, key) keymap of
     Just eff -> eff
