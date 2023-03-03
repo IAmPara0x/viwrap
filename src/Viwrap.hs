@@ -96,7 +96,7 @@ initialise = do
   (hMaster, hSlave) <- (,) <$> IO.fdToHandle fdMaster <*> IO.fdToHandle fdSlave
 
   let renv :: Env
-      renv = Env { _envCmd         = "racket"
+      renv = Env { _envCmd         = "node"
                  , _envCmdArgs     = []
                  , _envPollingRate = 20000
                  , _envBufferSize  = 2048
@@ -116,7 +116,7 @@ initialise = do
 
         return ph
 
-  ph <- runM $ runReader renv $ runLoggerIO [] setup
+  ph <- runM $ runReader renv $ runLoggerIO [PtyCtx] setup
 
   return (renv, ph)
 

@@ -13,6 +13,7 @@ import Control.Monad.Freer.State  (State, get, modify)
 import Data.ByteString            (ByteString)
 import Data.ByteString            qualified as BS
 import Data.Sequence              (Seq (..))
+import Data.String                (fromString)
 
 import Lens.Micro                 ((%~), (.~))
 
@@ -21,7 +22,7 @@ import Text.Printf                (printf)
 
 import Viwrap.Logger
 import Viwrap.Pty
-import Viwrap.Pty.Utils           (writeMaster)
+import Viwrap.Pty.Utils           (writeMaster, writeStdout)
 import Viwrap.VI
 import Viwrap.VI.Utils
   ( Cursor (..)
@@ -32,6 +33,7 @@ import Viwrap.VI.Utils
   , removeHook
   , timeoutAndRemove
   )
+import qualified System.Console.ANSI as ANSI
 
 type ViwrapEff' effs
   = Members '[HandleAct , Logger , Process , Reader Env , State ViwrapState] effs
@@ -57,10 +59,12 @@ insertCharTerminal inputBS = do
 
   eraseAndWrite hmaster (BS.length _zipperFocus) $ mconcat [inputBS, _zipperFocus]
 
+  writeStdout $ fromString ANSI.hideCursorCode
   moveCursor (Forward $ BS.length _zipperFocus)
 
   modify (currentPollRate .~ div pollingRate 2)
   addHook SyncCursor
+
 
   r <- _viLine <$> get
   logVI ["insertCharTerminal"] $ show r
@@ -98,6 +102,7 @@ backspaceTerminal = do
   Env { _masterPty = (_, hmaster), _envPollingRate = pollingRate } <- ask
 
   eraseAndWrite hmaster (BS.length _zipperFocus + 1) _zipperFocus
+  writeStdout (fromString ANSI.hideCursorCode)
 
   moveCursor (Forward $ BS.length _zipperFocus)
 
@@ -154,6 +159,7 @@ handleSyncCursor = do
       removeHook
 
       moveCursor (Backward $ BS.length _zipperFocus)
+      writeStdout (fromString ANSI.showCursorCode)
 
       modify (currentPollRate .~ _envPollingRate)
 

@@ -4,7 +4,6 @@ module Viwrap.VI.Utils
   , eraseAndWrite
   , moveToBeginning
   , moveToEnd
-    -- , moveToNextWord
   , Cursor (..)
   , moveCursor
   , removeHook
@@ -51,15 +50,6 @@ moveToEnd = do
   VILine {..} <- _viLine <$> get
   void $ moveRight (BS.length $ _viLineContent ^. zipperFocus)
 
--- moveToNextWord :: ViwrapEff fd effs => Eff effs ()
--- moveToNextWord = do
---   VILine {..} <- _viLine <$> get
-
---   let content = BS.drop _viCursorPos _viLineContent
---       x       = BS.dropWhile (isAlphaNum . BS.w2c) content
-
---   void $ moveRight (BS.length content - BS.length x + 1)
-
 toMode :: ViwrapEff effs => VIMode -> Eff effs ()
 toMode mode = modify (viLine . viMode .~ mode)
 
@@ -105,8 +95,11 @@ data Cursor
 moveCursor :: Members '[HandleAct , Logger , Reader Env] effs => Cursor -> Eff effs ()
 moveCursor cursor = do
   stdout    <- snd <$> getStdout
+  stdin    <- snd <$> getStdout
   cursorPos <- hCursorPos stdout
-  termsize  <- hTerminalSize stdout
+  termsize  <- hTerminalSize stdin
+
+  logVI ["moveCursor"] $ printf "cursor pos: %s, termsize: %s" (show cursorPos) (show termsize)
 
   -- TODO: find a better way to solve this.
   let movePos = case cursor of

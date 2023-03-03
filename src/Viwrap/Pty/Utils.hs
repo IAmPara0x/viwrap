@@ -111,10 +111,11 @@ forkAndExecCmdIO = do
 
   (_, _, _, ph) <-
     sendM $ Process.createProcess_ "slave process" $ (Process.proc _envCmd _envCmdArgs)
-      { delegate_ctlc = True
+      { delegate_ctlc = False
       , std_err       = UseHandle sHandle
       , std_out       = UseHandle sHandle
       , std_in        = UseHandle sHandle
+      , new_session   = True
       }
   return ph
 

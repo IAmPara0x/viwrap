@@ -22,6 +22,8 @@
 ### Bugs
 
 - [X] (B1) When we exit slave process there's hardware error due to master FD reading the input, figure out what's happening and fix it.
+- [X] ghci doesn't work with viwrap
+- [ ] Spago repl doesn't work
 
 ## working on
 
