@@ -39,7 +39,7 @@ defKeyMap = Map.fromList
   , ((Insert, 9)  , handleTab)
   , ((Insert, 10) , handleNewline)
   , ((Insert, 27) , toNormalMode)
-  , ((Insert, 127), void backspace)
+  , ((Insert, 127), backspace)
   ]
 
 

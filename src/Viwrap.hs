@@ -96,8 +96,8 @@ initialise = do
   (hMaster, hSlave) <- (,) <$> IO.fdToHandle fdMaster <*> IO.fdToHandle fdSlave
 
   let renv :: Env
-      renv = Env { _envCmd         = "ghci"
-                 , _envCmdArgs     = []
+      renv = Env { _envCmd         = "spago"
+                 , _envCmdArgs     = ["repl"]
                  , _envPollingRate = 20000
                  , _envBufferSize  = 2048
                  , _logFile        = "log.txt"

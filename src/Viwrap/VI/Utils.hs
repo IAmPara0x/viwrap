@@ -135,7 +135,7 @@ autoCompleteP = do
     _ -> return Nothing
 
 eraseAndWrite :: (Members '[HandleAct] effs) => Handle -> Int -> ByteString -> Eff effs ()
-eraseAndWrite h n content = hWrite h $ mconcat [BS.replicate n 8, content]
+eraseAndWrite h n content = hWrite h $ mconcat [BS.replicate n 127, content]
 
 addHook :: (Members '[State ViwrapState , Logger] effs) => VIHook -> Eff effs ()
 addHook hook = do
