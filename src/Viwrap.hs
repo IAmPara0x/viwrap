@@ -26,7 +26,7 @@ import Viwrap.Logger.Handler      (runLoggerIO)
 import Viwrap.Pty
 import Viwrap.Pty.Handler         (runHandleActIO, runProcessIO)
 import Viwrap.Pty.Utils
-import Viwrap.VI                  (VILine (..))
+import Viwrap.VI
 import Viwrap.VI.Handler          (handleVIHook, handleVITerminal)
 import Viwrap.VI.KeyMap           (defKeyMap, keyAction)
 
@@ -62,7 +62,7 @@ pollMasterFd ph = do
   let handleStdIn :: Maybe ByteString -> Eff effs ()
       handleStdIn Nothing        = return ()
       handleStdIn (Just content) = do
-        VILine {..} <- _viLine <$> get
+        VIState { _viMode } <- _viState <$> get
         keyAction defKeyMap _viMode $ BS.head content
 
       poll :: Eff effs ()
@@ -96,7 +96,7 @@ initialise = do
   (hMaster, hSlave) <- (,) <$> IO.fdToHandle fdMaster <*> IO.fdToHandle fdSlave
 
   let renv :: Env
-      renv = Env { _envCmd         = "node"
+      renv = Env { _envCmd         = "ghci"
                  , _envCmdArgs     = []
                  , _envPollingRate = 20000
                  , _envBufferSize  = 2048

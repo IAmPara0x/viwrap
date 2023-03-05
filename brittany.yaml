@@ -26,8 +26,8 @@ conf_forward:
      - -XTypeApplications
      - -XTypeFamilies
      - -XTypeOperators
-     - -XPatternSynonyms 
-     - -XForeignFunctionInterface 
+     - -XPatternSynonyms
+     - -XForeignFunctionInterface
 
 conf_preprocessor:
   ppconf_hackAroundIncludes: false

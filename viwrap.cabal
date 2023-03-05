@@ -41,6 +41,7 @@ library
       Viwrap.VI.Handler
       Viwrap.VI.KeyMap
       Viwrap.VI.Utils
+      Viwrap.Zipper
   other-modules:
       Paths_viwrap
   hs-source-dirs:

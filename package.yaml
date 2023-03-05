@@ -43,7 +43,7 @@ default-extensions:
 - AllowAmbiguousTypes
 - BlockArguments
 - DataKinds
-- DerivingStrategies 
+- DerivingStrategies
 - GADTs
 - ImportQualifiedPost
 - LambdaCase

@@ -24,6 +24,7 @@
 - [X] (B1) When we exit slave process there's hardware error due to master FD reading the input, figure out what's happening and fix it.
 - [X] ghci doesn't work with viwrap
 - [ ] Spago repl doesn't work
+- [ ] Node repl sometimes doesn't show cursor when it's at beginning
 
 ## working on
 
@@ -35,9 +36,13 @@
 
 - [ ] can we get controlling terminal for the slave proceess?
 	  - But why do we even need a controling terminal?
-	
+
 - [ ] How to identify when the prompt is up?
 
 - [X] How to determine when to supperese output from hmaster and when not to?
 
 - [ ] Check If we can implement batching such that we take multiple input at a time and process it.
+
+### Remarks
+
+- There's no need for VIEdit

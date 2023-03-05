@@ -28,7 +28,7 @@ module Viwrap.Pty
   , pselect
   , slavePty
   , viHooks
-  , viLine
+  , viState
   ) where
 
 import Control.Monad.Freer        (Members)
@@ -47,7 +47,7 @@ import System.Posix               (Fd)
 import System.Process             (ProcessHandle)
 
 import Viwrap.Logger              (Logger)
-import Viwrap.VI                  (VIEdit, VIHook, VILine, initialVILine)
+import Viwrap.VI
 
 
 data Timeout
@@ -91,14 +91,16 @@ data Child
   | Dead
   deriving stock (Eq, Show)
 
+
+
 data ViwrapState
   = ViwrapState
       { _isPromptUp        :: Bool
       , _childStatus       :: Child
       , _prevMasterContent :: ByteString
-      , _viLine            :: VILine
       , _viHooks           :: Seq VIHook
       , _currentPollRate   :: Int
+      , _viState           :: VIState
       }
   deriving stock (Show)
 
@@ -111,7 +113,7 @@ initialViwrapState :: ViwrapState
 initialViwrapState = ViwrapState { _childStatus       = Alive
                                  , _isPromptUp        = False
                                  , _prevMasterContent = mempty
-                                 , _viLine            = initialVILine
                                  , _viHooks           = mempty
                                  , _currentPollRate   = 10000
+                                 , _viState           = initialVIState
                                  }
