@@ -180,7 +180,6 @@ handleSyncCursor = do
       modify (currentPollRate .~ _envPollingRate)
 
 
-
 handleTabPressed :: (ViwrapEff effs) => Eff effs ()
 handleTabPressed = timeoutAndRemove do
 

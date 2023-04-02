@@ -23,23 +23,23 @@ import Viwrap.VI.Utils          (moveToBeginning, moveToEnd, toNormalMode, toIns
 type KeyMap effs = ViwrapEff effs => Map (VIMode, Word8) (Eff effs ())
 
 defKeyMap :: KeyMap effs
-defKeyMap = Map.fromList
-  [ ((Normal, 10) , handleNewline)
-  , ((Normal, 65) , moveToEnd >> toInsertMode)
-  , ((Normal, 73) , moveToBeginning >> toInsertMode)
+defKeyMap = Map.mapKeys (fmap BS.c2w) $ Map.fromList
+  [ ((Normal, '\n') , handleNewline)
+  , ((Normal, 'A') , moveToEnd >> toInsertMode)
+  , ((Normal, 'I') , moveToBeginning >> toInsertMode)
   -- , ((Normal, 99), writeMaster @fd $ mconcat [BS.singleton 3])
-  , ((Normal, 100), void backspace)
-  , ((Normal, 104), void $ moveLeft 1)
-  , ((Normal, 105), toInsertMode)
-  , ((Normal, 108), void $ moveRight 1)
-  , ((Normal, BS.c2w 'k'), moveToPrevLine)
-  , ((Normal, BS.c2w 'j'), moveToNextLine)
+  , ((Normal, 'd'), void backspace)
+  , ((Normal, 'h'), void $ moveLeft 1)
+  , ((Normal, 'i'), toInsertMode)
+  , ((Normal, 'l'), void $ moveRight 1)
+  , ((Normal, 'k'), moveToPrevLine)
+  , ((Normal, 'j'), moveToNextLine)
 
        -- Insert Mode KeyMap
-  , ((Insert, 9)  , handleTab)
-  , ((Insert, 10) , handleNewline)
-  , ((Insert, 27) , toNormalMode)
-  , ((Insert, 127), backspace)
+  , ((Insert, '\t')  , handleTab)
+  , ((Insert, '\n') , handleNewline)
+  , ((Insert, '\ESC') , toNormalMode)
+  , ((Insert, '\DEL'), backspace)
   ]
 
 

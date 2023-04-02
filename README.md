@@ -19,12 +19,18 @@
 - [ ] Install singal handlers
 	  - [ ] SIGWICH as we need to resize the master fd when the stdin size changes
 
+- [ ] improve the algorithm to find where to insert the text such that it requires less calls to
+      termsize and cursor position
+
 ### Bugs
 
 - [X] (B1) When we exit slave process there's hardware error due to master FD reading the input, figure out what's happening and fix it.
 - [X] ghci doesn't work with viwrap
 - [ ] Spago repl doesn't work
-- [ ] Node repl sometimes doesn't show cursor when it's at beginning
+- [ ] sometimes doesn't show cursor when it's at beginning and there's no text
+- [ ] Can't get terminal size reliably
+- [ ] Can't get cursor position reliably
+- [ ] ghci doesn't wrap lined when using viwrap
 
 ## working on
 
