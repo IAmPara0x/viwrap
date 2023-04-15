@@ -14,7 +14,7 @@ import Viwrap.Pty
 -- Handlers for logger
 runLoggerUnit :: Eff (Logger ': effs) a -> Eff effs a
 runLoggerUnit = interpret $ \case
-  LogM{} -> return ()
+  LogM{} -> pure ()
 
 runLoggerIO
   :: (Members '[Reader Env] effs, LastMember IO effs)

@@ -2,8 +2,8 @@ module Viwrap
   ( launch
   ) where
 
-import Control.Monad              (zipWithM_)
-import Control.Monad.Freer        (Eff, runM)
+import Control.Monad              (void, zipWithM_)
+import Control.Monad.Freer        (Eff, runM, sendM)
 import Control.Monad.Freer.Reader (ask, runReader)
 import Control.Monad.Freer.State  (evalState, get, modify)
 import Data.ByteString            (ByteString)
@@ -15,19 +15,27 @@ import Lens.Micro                 ((&), (.~))
 import System.IO                  qualified as IO
 import System.IO                  (BufferMode (..), hSetBuffering)
 import System.Posix               qualified as IO
+import System.Posix.Signals       qualified as Signals
+import System.Posix.Signals       (Handler (Catch))
+import System.Posix.Signals.Exts  qualified as Signals
 import System.Posix.Terminal      qualified as Terminal
 import System.Posix.Terminal      (TerminalMode (..))
 import System.Process             (ProcessHandle)
 
 import Text.Printf                (printf)
 
+import Control.Concurrent         (MVar, newMVar, putMVar, takeMVar)
+import Data.Default               (def)
+import System.Console.ANSI        qualified as ANSI
+import System.Posix               (Fd)
 import Viwrap.Logger
 import Viwrap.Logger.Handler      (runLoggerIO)
-import Viwrap.Pty
-import Viwrap.Pty.Handler         (runHandleActIO, runProcessIO)
+import Viwrap.Pty                 hiding (Terminal (..), getTermSize)
+import Viwrap.Pty.Handler         (runHandleActIO, runTerminalIO)
+import Viwrap.Pty.TermSize        (TermSize (..), getTermSize, setTermSize)
 import Viwrap.Pty.Utils
 import Viwrap.VI
-import Viwrap.VI.Handler          (handleVIHook, handleVITerminal)
+import Viwrap.VI.Handler          (handleVIHook)
 import Viwrap.VI.KeyMap           (defKeyMap, keyAction)
 
 
@@ -60,7 +68,7 @@ pollMasterFd ph = do
   hMaster <- snd . _masterPty <$> ask
 
   let handleStdIn :: Maybe ByteString -> Eff effs ()
-      handleStdIn Nothing        = return ()
+      handleStdIn Nothing        = pure ()
       handleStdIn (Just content) = do
         VIState { _viMode } <- _viState <$> get
         keyAction defKeyMap _viMode $ BS.head content
@@ -88,16 +96,37 @@ pollMasterFd ph = do
             poll
   poll
 
-initialise :: IO (Env, ProcessHandle)
+
+data Initialized
+  = Initialized
+      { initialEnv         :: Env
+      , slaveProcessHandle :: ProcessHandle
+      , termStateMVar      :: MVar TermState
+      }
+
+sigWINCHHandler :: MVar TermState -> Fd -> Handler
+sigWINCHHandler termStateMVar fdMaster = Catch do
+  setTermSize IO.stdInput fdMaster
+  termState     <- takeMVar termStateMVar
+  TermSize {..} <- getTermSize IO.stdInput
+  putMVar termStateMVar (termState { _getTermSize = Just (termHeight, termWidth) })
+
+initialise :: IO Initialized
 initialise = do
   (fdMaster, fdSlave) <- Terminal.openPseudoTerminal
   hSetBuffering IO.stdin  NoBuffering
   hSetBuffering IO.stdout NoBuffering
   (hMaster, hSlave) <- (,) <$> IO.fdToHandle fdMaster <*> IO.fdToHandle fdSlave
 
+  size              <- ANSI.hGetTerminalSize IO.stdout
+  cursorPos         <- ANSI.hGetCursorPosition IO.stdout
+  mvar              <- newMVar TermState { _getTermSize = size, _getTermCursorPos = cursorPos }
+
+  void $ Signals.installHandler Signals.sigWINCH (sigWINCHHandler mvar fdMaster) Nothing
+
   let renv :: Env
-      renv = Env { _envCmd         = "python"
-                 , _envCmdArgs     = []
+      renv = Env { _envCmd         = "stack"
+                 , _envCmdArgs     = ["ghci"]
                  , _envPollingRate = 20000
                  , _envBufferSize  = 2048
                  , _logFile        = "log.txt"
@@ -106,7 +135,10 @@ initialise = do
                  }
 
       setup = do
-        setTermSizeIO IO.stdInput fdMaster
+
+        sendM (setTermSize IO.stdInput fdMaster)
+        newSize <- sendM $ getTermSize fdMaster
+        logPty ["SetTermSize"] $ printf "FD: %s, New TermSize: %s" (show fdMaster) (show newSize)
 
         ph             <- forkAndExecCmdIO
 
@@ -114,26 +146,27 @@ initialise = do
         setTerminalAttrIO IO.stdInput masterTermAttr Terminal.Immediately
         uninstallTerminalModes IO.stdInput [EnableEcho, ProcessInput] Terminal.Immediately
 
-        return ph
+        pure ph
 
   ph <- runM $ runReader renv $ runLoggerIO [PtyCtx] setup
 
-  return (renv, ph)
+  pure $ Initialized { initialEnv = renv, slaveProcessHandle = ph, termStateMVar = mvar }
 
 cleanup :: Env -> IO ()
 cleanup Env {..} = do
   IO.hClose (snd _masterPty)
   IO.hClose (snd _slavePty)
+  ANSI.hShowCursor IO.stdout
 
 launch :: IO ()
 launch = do
-  (renv, ph) <- initialise
+  Initialized {..} <- initialise
 
-  handleVITerminal (pollMasterFd ph)
-    & runHandleActIO
-    & runProcessIO
-    & runLoggerIO [PollCtx, VICtx]
-    & evalState initialViwrapState
-    & runReader renv
+  runHandleActIO (pollMasterFd slaveProcessHandle)
+    & evalState (def :: ViwrapState)
+    & runTerminalIO
+    & evalState termStateMVar
+    & runLoggerIO [OutputCtx, PollCtx, VICtx]
+    & runReader initialEnv
     & runM
-  cleanup renv
+  cleanup initialEnv

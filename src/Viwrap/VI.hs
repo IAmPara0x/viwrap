@@ -1,25 +1,19 @@
 module Viwrap.VI
   ( AutoComplete (..)
-  , VIEdit (..)
   , VIHook (..)
   , VILine
   , VILines
   , VIMode (..)
   , VIState (..)
-  , backspace
   , currentLine
-  , initialVIState
-  , insertBS
-  , moveLeft
-  , moveRight
   , prevLines
   , viMode
   ) where
 
-import Control.Monad.Freer.TH (makeEffect)
-import Data.ByteString        (ByteString)
-import Data.Sequence          (Seq)
-import Lens.Micro.TH          (makeLenses)
+import Data.ByteString (ByteString)
+import Data.Default    (Default (def))
+import Data.Sequence   (Seq)
+import Lens.Micro.TH   (makeLenses)
 
 import Viwrap.Zipper
 
@@ -31,15 +25,6 @@ data VIMode
 
 
 type VILine = Zipper ByteString
-
-
-data VIEdit a where
-  Backspace :: VIEdit ()
-  MoveLeft :: Int -> VIEdit ()
-  MoveRight :: Int -> VIEdit ()
-  InsertBS :: ByteString -> VIEdit ()
-
-makeEffect ''VIEdit
 
 data AutoComplete
   = Completion ByteString
@@ -61,7 +46,7 @@ data VIState
       }
   deriving stock (Eq, Show)
 
-initialVIState :: VIState
-initialVIState = VIState { _viMode = Insert, _prevLines = mempty, _currentLine = mempty }
+instance Default VIState where
+  def = VIState { _viMode = Insert, _prevLines = mempty, _currentLine = mempty }
 
 makeLenses ''VIState

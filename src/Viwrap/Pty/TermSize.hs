@@ -65,7 +65,7 @@ getTermSize (Fd fd) = do
                               , termHeight = fromInteger $ toInteger c_wsRow
                               }
       free ptr_ws
-      return termSize
+      pure termSize
     else do
       free ptr_ws
       error (printf "ERROR: while calling ioctl to get the terminal size for %s" (show fd))

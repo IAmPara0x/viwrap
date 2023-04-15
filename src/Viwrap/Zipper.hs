@@ -1,6 +1,7 @@
 module Viwrap.Zipper
   ( IsZipper (..)
   , Zipper (..)
+  , appendZipper
   , backwardZipper
   , contentZipper
   , deleteZipper
@@ -8,21 +9,16 @@ module Viwrap.Zipper
   , insertZipper
   , zipperCrumbs
   , zipperFocus
-  , appendZipper
   ) where
 
--- import Data.Kind (Type)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
--- import Data.Word (Word8)
 import Data.Sequence   (Seq)
 import Data.Sequence   qualified as Seq
 import Lens.Micro      ((%~))
 import Lens.Micro.TH   (makeLenses)
 
 class (Monoid a) => IsZipper a where
-
-  -- type ZipperFocus a :: Type
 
   zipperTake :: Int -> a -> a
   zipperDrop :: Int -> a -> a
@@ -34,12 +30,10 @@ instance IsZipper ByteString where
   zipperReverse = BS.reverse
 
 instance IsZipper (Seq a) where
-  -- type ZipperFocus (Seq a) = a
 
   zipperTake    = Seq.take
   zipperDrop    = Seq.drop
   zipperReverse = Seq.reverse
-
 
 data Zipper a
   = Zipper

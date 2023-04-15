@@ -1,14 +1,24 @@
 module Viwrap.VI.Handler
-  ( handleNewline
+  ( backspace
+  , handleNewline
   , handleTab
   , handleVIHook
-  , handleVITerminal
+  , insertBS
+  , insertNoUpdate
+  , moveLeft
+  , moveRight
+  , moveToBeginning
+  , moveToEnd
+  , moveToNextLine
+  , moveToPrevLine
+  , toInsertMode
+  , toNormalMode
   ) where
 
-import Control.Monad              (when)
-import Control.Monad.Freer        (Eff, Members, interpret)
-import Control.Monad.Freer.Reader (Reader, ask)
-import Control.Monad.Freer.State  (State, get, modify)
+import Control.Monad              (unless, when)
+import Control.Monad.Freer        (Eff)
+import Control.Monad.Freer.Reader (ask)
+import Control.Monad.Freer.State  (get, modify)
 
 import Data.ByteString            (ByteString)
 import Data.ByteString            qualified as BS
@@ -16,7 +26,7 @@ import Data.Sequence              (Seq (..))
 import Data.Sequence              qualified as Seq
 import Data.String                (fromString)
 
-import Lens.Micro                 ((%~), (.~))
+import Lens.Micro                 ((%~), (.~), (^.))
 
 import System.Console.ANSI        qualified as ANSI
 
@@ -38,23 +48,15 @@ import Viwrap.VI.Utils
   )
 import Viwrap.Zipper
 
-type ViwrapEff' effs
-  = Members '[HandleAct , Logger , Process , Reader Env , State ViwrapState] effs
 
-handleVITerminal :: (ViwrapEff' effs) => Eff (VIEdit ': effs) a -> Eff effs a
-handleVITerminal = interpret \case
-  Backspace    -> backspaceTerminal
-  MoveLeft  n  -> moveLeftTerminal n
-  MoveRight n  -> moveRightTerminal n
-  InsertBS  bs -> insertCharTerminal bs
+insertBS :: (ViwrapEff effs) => ByteString -> Eff effs ()
+insertBS inputBS = do
 
-insertCharTerminal :: (ViwrapEff' effs) => ByteString -> Eff effs ()
-insertCharTerminal inputBS = do
+  let logLabels = ["insertBS"]
 
   VIState {..} <- _viState <$> get
 
-  logVI ["insertCharTerminal"]
-    $ printf "inserting %s when zipper state is %s" (show inputBS) (show _currentLine)
+  logVI logLabels $ printf "inserting %s when zipper state is %s" (show inputBS) (show _currentLine)
 
   Env { _masterPty = (_, hmaster), _envPollingRate = pollingRate } <- ask
 
@@ -70,12 +72,35 @@ insertCharTerminal inputBS = do
   modify (currentPollRate .~ div pollingRate 2)
   addHook SyncCursor
 
+  r <- _viState <$> get
+  logVI logLabels $ show r
+
+insertNoUpdate :: (ViwrapEff effs) => ByteString -> Eff effs ()
+insertNoUpdate inputBS = do
+
+  let logLabels = ["insertNoUpdate"]
+
+  VIState {..} <- _viState <$> get
+
+  Env { _masterPty = (_, hmaster), _envPollingRate = pollingRate } <- ask
+
+  logVI logLabels $ printf "input: %s" (show inputBS)
+
+  let movePos = BS.length $ _zipperFocus _currentLine
+
+  eraseAndWrite hmaster movePos $ mconcat [inputBS, _zipperFocus _currentLine]
+
+  writeStdout $ fromString ANSI.hideCursorCode
+  moveCursor (Forward movePos)
+
+  modify (currentPollRate .~ div pollingRate 2)
+  addHook SyncCursor
 
   r <- _viState <$> get
-  logVI ["insertCharTerminal"] $ show r
+  logVI logLabels $ show r
 
-moveLeftTerminal :: (ViwrapEff' effs) => Int -> Eff effs ()
-moveLeftTerminal n = do
+moveLeft :: (ViwrapEff effs) => Int -> Eff effs ()
+moveLeft n = do
 
   VIState {..} <- _viState <$> get
 
@@ -86,10 +111,10 @@ moveLeftTerminal n = do
   moveCursor (Backward movePos)
 
   r <- _viState <$> get
-  logVI ["moveLeftTerminal"] $ show r
+  logVI ["moveLeft"] $ show r
 
-moveRightTerminal :: (ViwrapEff' effs) => Int -> Eff effs ()
-moveRightTerminal n = do
+moveRight :: (ViwrapEff effs) => Int -> Eff effs ()
+moveRight n = do
 
   VIState {..} <- _viState <$> get
 
@@ -98,33 +123,48 @@ moveRightTerminal n = do
 
   moveCursor (Forward movePos)
   r <- _viState <$> get
-  logVI ["moveRightTerminal"] $ show r
+  logVI ["moveRight"] $ show r
 
-backspaceTerminal :: (ViwrapEff' effs) => Eff effs ()
-backspaceTerminal = do
+backspace :: (ViwrapEff effs) => Eff effs ()
+backspace = do
 
   VIState {..} <- _viState <$> get
-  Env { _masterPty = (_, hmaster), _envPollingRate = pollingRate } <- ask
 
-  modify (viState . currentLine %~ deleteZipper)
+  unless
+    (BS.null $ _zipperCrumbs _currentLine)
+    do
 
-  let movePos = BS.length $ _zipperFocus _currentLine
+      Env { _masterPty = (_, hmaster), _envPollingRate = pollingRate } <- ask
 
-  eraseAndWrite hmaster (movePos + 1) (_zipperFocus _currentLine)
-  writeStdout (fromString ANSI.hideCursorCode)
+      modify (viState . currentLine %~ deleteZipper)
 
-  moveCursor (Forward movePos)
+      let movePos = BS.length $ _zipperFocus _currentLine
 
-  addHook SyncCursor
-  modify (currentPollRate .~ div pollingRate 2)
+      eraseAndWrite hmaster (movePos + 1) (_zipperFocus _currentLine)
+      writeStdout (fromString ANSI.hideCursorCode)
 
-  r <- _viState <$> get
-  logVI ["backspaceTerminal"] $ show r
+      moveCursor (Forward movePos)
+
+      addHook SyncCursor
+      modify (currentPollRate .~ div pollingRate 2)
+
+      r <- _viState <$> get
+      logVI ["backspace"] $ show r
+
+moveToBeginning :: ViwrapEff effs => Eff effs ()
+moveToBeginning = do
+  VIState {..} <- _viState <$> get
+  moveLeft (BS.length $ _currentLine ^. zipperCrumbs)
+
+moveToEnd :: ViwrapEff effs => Eff effs ()
+moveToEnd = do
+  VIState {..} <- _viState <$> get
+  moveRight (BS.length $ _currentLine ^. zipperFocus)
 
 handleNewline :: (ViwrapEff effs) => Eff effs ()
 handleNewline = do
 
-  VIState{..} <- _viState <$> get
+  VIState {..} <- _viState <$> get
 
   writeMaster "\n"
 
@@ -148,21 +188,72 @@ handleTab = do
       writeMaster (BS.singleton 9)
       addHook TabPressed
 
+moveToPrevLine :: ViwrapEff effs => Eff effs ()
+moveToPrevLine = do
+
+  s@VIState {..} <- _viState <$> get
+
+  logVI ["moveToPrevLine"] $ printf "vistate: %s" (show s)
+
+  case _zipperCrumbs _prevLines of
+    Empty          -> pure ()
+    prevLine :<| _ -> do
+      Env { _masterPty = (_, hmaster), _envPollingRate = pollingRate } <- ask
+
+      let currentContent = contentZipper _currentLine
+          prevContent    = contentZipper prevLine
+
+      eraseAndWrite hmaster (BS.length currentContent) prevContent
+
+      writeStdout $ fromString ANSI.hideCursorCode
+      moveCursor (Forward $ BS.length $ _zipperFocus _currentLine)
+
+      modify (viState . prevLines %~ backwardZipper 1)
+      modify (viState . currentLine .~ prevLine)
+      modify (currentPollRate .~ div pollingRate 2)
+
+      addHook SyncCursor
+
+moveToNextLine :: ViwrapEff effs => Eff effs ()
+moveToNextLine = do
+
+  modify (viState . prevLines %~ forwardZipper 1)
+
+  s@VIState {..} <- _viState <$> get
+
+  logVI ["moveToNextLine"] $ printf "vistate: %s" (show s)
+
+  case _zipperFocus _prevLines of
+    Empty          -> pure ()
+    nextLine :<| _ -> do
+      Env { _masterPty = (_, hmaster), _envPollingRate = pollingRate } <- ask
+
+      let currentContent = contentZipper _currentLine
+          nextContent    = contentZipper nextLine
+
+      eraseAndWrite hmaster (BS.length currentContent) nextContent
+
+      writeStdout $ fromString ANSI.hideCursorCode
+      moveCursor (Forward $ BS.length $ _zipperFocus _currentLine)
+
+      modify (viState . currentLine .~ nextLine)
+      modify (currentPollRate .~ div pollingRate 2)
+
+      addHook SyncCursor
+
 handleVIHook :: (ViwrapEff effs) => Eff effs ()
 handleVIHook = do
   hooks <- _viHooks <$> get
 
   case hooks of
-    Empty              -> return ()
+    Empty              -> pure ()
     (SyncCursor :<| _) -> handleSyncCursor
     (TabPressed :<| _) -> handleTabPressed
 
 handleSyncCursor :: (ViwrapEff effs) => Eff effs ()
 handleSyncCursor = do
 
-
   ViwrapState { _prevMasterContent, _viState = VIState { _currentLine = Zipper {..} } } <- get
-
 
   logVI ["SyncCursor"] $ printf "PrevMasterContent: %s" (show _prevMasterContent)
 
@@ -189,8 +280,26 @@ handleTabPressed = timeoutAndRemove do
   logVI ["handleVIHook", "TabPressed"] (show result)
 
   case result of
-    Nothing                     -> return ()
+    Nothing                     -> pure ()
     (Just CompletionList      ) -> removeHook
     (Just (Completion content)) -> do
       removeHook
       modify (viState . currentLine %~ insertZipper content)
+
+
+toInsertMode :: ViwrapEff effs => Eff effs ()
+toInsertMode = do
+  toMode Insert
+  VIState { _prevLines } <- _viState <$> get
+  modify (viState . prevLines %~ forwardZipper (Seq.length $ _zipperFocus _prevLines))
+  modify (viState . prevLines %~ deleteZipper)
+
+toNormalMode :: ViwrapEff effs => Eff effs ()
+toNormalMode = do
+  toMode Normal
+  moveLeft 1
+  VIState { _currentLine } <- _viState <$> get
+  modify (viState . prevLines %~ appendZipper (Seq.singleton _currentLine))
+
+toMode :: ViwrapEff effs => VIMode -> Eff effs ()
+toMode mode = modify (viState . viMode .~ mode)

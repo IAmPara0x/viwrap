@@ -1,33 +1,36 @@
 module Viwrap.Pty.Utils
   ( fdCloseIO
   , forkAndExecCmdIO
-  , getTermSizeIO
   , getTerminalAttrIO
+  , hGetCursorPosition
   , installTerminalModes
-  , setTermSizeIO
   , setTerminalAttrIO
   , uninstallTerminalModes
   , writeMaster
   , writeStdout
   ) where
 
-import Control.Monad.Freer        (Eff, LastMember, Members, sendM)
-import Control.Monad.Freer.Reader (Reader, ask)
+import Control.Monad                (when)
+import Control.Monad.Freer          (Eff, LastMember, Members, sendM)
+import Control.Monad.Freer.Reader   (Reader, ask)
 
-import Data.ByteString            (ByteString)
+import Data.ByteString              (ByteString)
 
-import System.Posix               (Fd)
-import System.Posix.IO.ByteString qualified as IO
-import System.Posix.Terminal      qualified as Terminal
-import System.Posix.Terminal      (TerminalAttributes, TerminalMode (..), TerminalState)
-import System.Process             qualified as Process
-import System.Process             (CreateProcess (..), ProcessHandle, StdStream (..))
+import System.IO                    qualified as IO
+import System.IO                    (Handle)
+import System.Posix                 (Fd)
+import System.Posix.IO.ByteString   qualified as IO
+import System.Posix.Terminal        qualified as Terminal
+import System.Posix.Terminal        (TerminalAttributes, TerminalMode (..), TerminalState)
+import System.Process               qualified as Process
+import System.Process               (CreateProcess (..), ProcessHandle, StdStream (..))
 
-import Text.Printf                (printf)
+import Text.ParserCombinators.ReadP (readP_to_S)
+import Text.Printf                  (printf)
 
+import System.Console.ANSI          qualified as ANSI
 import Viwrap.Logger
-import Viwrap.Pty
-import Viwrap.Pty.TermSize        (TermSize, getTermSize, setTermSize)
+import Viwrap.Pty                   hiding (getTermSize)
 
 installTerminalModes
   :: (Members '[Logger] effs, LastMember IO effs)
@@ -117,7 +120,7 @@ forkAndExecCmdIO = do
       , std_in        = UseHandle sHandle
       , new_session   = True
       }
-  return ph
+  pure ph
 
 getTerminalAttrIO
   :: (Members '[Logger] effs, LastMember IO effs) => Fd -> Eff effs TerminalAttributes
@@ -128,7 +131,7 @@ getTerminalAttrIO fd = do
   logPty ["GetTerminalAttr"]
     $ printf "FD: %s, Terminal Attributes: %s" (show fd) (showTerminalModes termAttr)
 
-  return termAttr
+  pure termAttr
 
 setTerminalAttrIO
   :: (Members '[Logger] effs, LastMember IO effs)
@@ -142,18 +145,6 @@ setTerminalAttrIO fd termAttr termState = do
                                       (toInteger fd)
   sendM (Terminal.setTerminalAttributes fd termAttr termState)
 
-getTermSizeIO :: (Members '[Logger] effs, LastMember IO effs) => Fd -> Eff effs TermSize
-getTermSizeIO fd = do
-  size <- sendM (getTermSize fd)
-  logPty ["GetTermSize"] $ printf "FD: %s, TermSize: %s" (show fd) (show size)
-  return size
-
-setTermSizeIO :: (Members '[Logger] effs, LastMember IO effs) => Fd -> Fd -> Eff effs ()
-setTermSizeIO fdFrom fdTo = do
-  sendM (setTermSize fdFrom fdTo)
-  newSize <- sendM $ getTermSize fdTo
-  logPty ["SetTermSize"] $ printf "FD: %s, New TermSize: %s" (show fdTo) (show newSize)
-
 
 writeStdout :: (Members '[Reader Env , HandleAct] effs) => ByteString -> Eff effs ()
 writeStdout content = do
@@ -164,3 +155,40 @@ writeMaster :: (Members '[Reader Env , HandleAct] effs) => ByteString -> Eff eff
 writeMaster content = do
   hmaster <- snd . _masterPty <$> ask
   hWrite hmaster content
+
+hGetCursorPosition
+  :: forall effs
+   . (Members '[Logger] effs, LastMember IO effs)
+  => Handle
+  -> Eff effs (Maybe (Int, Int))
+hGetCursorPosition h = do
+  sendM clearStdin
+  sendM $ ANSI.hReportCursorPosition h
+  fmap to0base <$> getCursorPosition' mempty
+ where
+
+  to0base :: (Int, Int) -> (Int, Int)
+  to0base (row, col) = (row - 1, col - 1)
+
+-- TODO: inputBuffer is the buffer of the user inputs (generally happens when user is typing blazingly fast)
+-- that we read instead of reading cursorPosition. Currently, we don't do anything with this buffer but the
+-- goal is to add this inputBuffer back to input and process it somehow
+  getCursorPosition' :: String -> Eff effs (Maybe (Int, Int))
+  getCursorPosition' inputBuffer = do
+
+    cursorPosStr <- sendM ANSI.getReportedCursorPosition
+
+    logOutput ["hGetCursorPosition", "inputBuffer"] $ "Input Buffer content: " <> inputBuffer
+    logOutput ["hGetCursorPosition"] (show cursorPosStr)
+
+    case readP_to_S ANSI.cursorPosition cursorPosStr of
+      []                -> getCursorPosition' (inputBuffer <> cursorPosStr)
+      [((row, col), _)] -> pure $ Just (row, col)
+      (_ : _          ) -> pure Nothing
+
+  clearStdin :: IO ()
+  clearStdin = do
+    isReady <- IO.hReady IO.stdin
+    when isReady $ do
+      _ <- getChar
+      clearStdin

@@ -9,6 +9,7 @@
 - [X] Start implementing basic vim like editing.
 - [X] Improve Logging
 - [X] long lines doesn't wrap properly.
+- [X] SIGWICH as we need to resize the master fd when the stdin size changes
 
 - [ ] Implement Tab when the cursor is at the middle of the line
 - [ ] Differentiate betweeen \t and space
@@ -16,24 +17,26 @@
 - [ ] Fix Jittery cursor
 - [ ] Implement Advance vim editting features
 - [ ] Figure out a better way to handle colored prompt
-- [ ] Install singal handlers
-	  - [ ] SIGWICH as we need to resize the master fd when the stdin size changes
+- [ ] Install signal handlers
 
 - [ ] improve the algorithm to find where to insert the text such that it requires less calls to
       termsize and cursor position
+
+- [ ] Document the code
 
 ### Bugs
 
 - [X] (B1) When we exit slave process there's hardware error due to master FD reading the input, figure out what's happening and fix it.
 - [X] ghci doesn't work with viwrap
+- [X] Can't get terminal size reliably
+- [X] sometimes doesn't show cursor when it's at beginning and there's no text
 - [ ] Spago repl doesn't work
-- [ ] sometimes doesn't show cursor when it's at beginning and there's no text
-- [ ] Can't get terminal size reliably
 - [ ] Can't get cursor position reliably
 - [ ] ghci doesn't wrap lined when using viwrap
 
 ## working on
 
+- [ ] Document the code
 - [ ] Implement Advance vim editting features
 - [ ] Improve ANSI escape sequence parser
 - [ ] Find a way to find Jittery cursor.

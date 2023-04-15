@@ -32,17 +32,17 @@ cursorSeq :: Parser ByteString
 cursorSeq = do
   escSeq <- sequence [escapeStart, csi]
   mline  <- optional $ try do
-    line <- (foldMap BS.singleton) <$> some digitP
+    line <- foldMap BS.singleton <$> some digitP
     semicolon
-    return line
+    pure line
 
-  columns <- (foldMap BS.singleton) <$> some digitP
+  columns <- foldMap BS.singleton <$> some digitP
 
   code    <- BS.singleton <$> choice (map (single . c2w) $ ['A' .. 'G'] ++ ['n'])
 
   case mline of
-    Nothing     -> return $ mconcat $ escSeq ++ [columns, code]
-    (Just line) -> return $ mconcat $ escSeq ++ [line, BS.singleton (c2w ';'), columns, code]
+    Nothing     -> pure $ mconcat $ escSeq ++ [columns, code]
+    (Just line) -> pure $ mconcat $ escSeq ++ [line, BS.singleton (c2w ';'), columns, code]
 
 
 eraseSeq :: Parser ByteString
@@ -52,8 +52,8 @@ eraseSeq = do
   code   <- BS.singleton <$> choice (map (single . c2w) ['J', 'K'])
 
   case mnum of
-    Nothing    -> return $ mconcat $ escSeq ++ [code]
-    (Just num) -> return $ mconcat $ escSeq ++ [BS.singleton num, code]
+    Nothing    -> pure $ mconcat $ escSeq ++ [code]
+    (Just num) -> pure $ mconcat $ escSeq ++ [BS.singleton num, code]
 
 ansiParser :: Parser ByteString
 ansiParser = choice [try ctrlSeq, try eraseSeq, try cursorSeq]

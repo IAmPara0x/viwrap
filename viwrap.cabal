@@ -66,6 +66,7 @@ library
     , base >=4.7 && <5
     , bytestring
     , containers
+    , data-default
     , freer-simple
     , megaparsec
     , microlens
@@ -105,6 +106,7 @@ executable viwrap-exe
     , base >=4.7 && <5
     , bytestring
     , containers
+    , data-default
     , freer-simple
     , megaparsec
     , microlens
@@ -142,6 +144,7 @@ test-suite viwrap-test
     , base >=4.7 && <5
     , bytestring
     , containers
+    , data-default
     , freer-simple
     , megaparsec
     , microlens

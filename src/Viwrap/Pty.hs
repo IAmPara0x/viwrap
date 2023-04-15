@@ -3,11 +3,14 @@ module Viwrap.Pty
   ( Child (..)
   , Env (..)
   , HandleAct (..)
-  , Process (..)
+  , TermState (..)
+  , Terminal (..)
   , Timeout (..)
   , ViwrapEff
   , ViwrapState (..)
+  , cacheCursorPos
   , childStatus
+  , clearCacheCursorPos
   , currentPollRate
   , envBufferSize
   , envCmd
@@ -16,10 +19,9 @@ module Viwrap.Pty
   , getStderr
   , getStdin
   , getStdout
-  , hCursorPos
-  , hTerminalSize
+  , getTermCursorPos
+  , getTermSize
   , hWrite
-  , initialViwrapState
   , isProcessDead
   , isPromptUp
   , logFile
@@ -27,6 +29,8 @@ module Viwrap.Pty
   , prevMasterContent
   , pselect
   , slavePty
+  , termCursorPos
+  , termSize
   , viHooks
   , viState
   ) where
@@ -37,6 +41,7 @@ import Control.Monad.Freer.State  (State)
 import Control.Monad.Freer.TH     (makeEffect)
 
 import Data.ByteString            (ByteString)
+import Data.Default               (Default (def))
 import Data.Sequence              (Seq)
 
 import Lens.Micro.TH              (makeLenses)
@@ -57,20 +62,14 @@ data Timeout
   deriving stock (Show)
 
 data HandleAct a where
-  Pselect :: [Handle] -> Timeout -> HandleAct [Maybe ByteString]
-  HWrite :: Handle -> ByteString -> HandleAct ()
+  GetStderr :: HandleAct (Fd, Handle)
   GetStdin :: HandleAct (Fd, Handle)
   GetStdout :: HandleAct (Fd, Handle)
-  GetStderr :: HandleAct (Fd, Handle)
-  HCursorPos :: Handle -> HandleAct (Maybe (Int, Int))
-  HTerminalSize :: Handle -> HandleAct (Maybe (Int, Int))
+  HWrite :: Handle -> ByteString -> HandleAct ()
+  Pselect :: [Handle] -> Timeout -> HandleAct [Maybe ByteString]
+  IsProcessDead :: ProcessHandle -> HandleAct (Maybe ExitCode)
 
 makeEffect ''HandleAct
-
-data Process a where
-  IsProcessDead :: ProcessHandle -> Process (Maybe ExitCode)
-
-makeEffect ''Process
 
 data Env
   = Env
@@ -91,8 +90,6 @@ data Child
   | Dead
   deriving stock (Eq, Show)
 
-
-
 data ViwrapState
   = ViwrapState
       { _isPromptUp        :: Bool
@@ -106,14 +103,31 @@ data ViwrapState
 
 makeLenses ''ViwrapState
 
-type ViwrapEff effs
-  = Members '[HandleAct , Logger , Process , Reader Env , State ViwrapState , VIEdit] effs
+instance Default ViwrapState where
+  def = ViwrapState { _childStatus       = Alive
+                    , _isPromptUp        = False
+                    , _prevMasterContent = mempty
+                    , _viHooks           = mempty
+                    , _currentPollRate   = 10000
+                    , _viState           = def
+                    }
 
-initialViwrapState :: ViwrapState
-initialViwrapState = ViwrapState { _childStatus       = Alive
-                                 , _isPromptUp        = False
-                                 , _prevMasterContent = mempty
-                                 , _viHooks           = mempty
-                                 , _currentPollRate   = 10000
-                                 , _viState           = initialVIState
-                                 }
+data Terminal a where
+  TermSize :: Terminal (Int, Int)
+  TermCursorPos :: Terminal (Int, Int)
+  CacheCursorPos :: (Int, Int) -> Terminal ()
+  ClearCacheCursorPos :: Terminal ()
+
+makeEffect ''Terminal
+
+data TermState
+  = TermState
+      { _getTermSize      :: Maybe (Int, Int)
+      , _getTermCursorPos :: Maybe (Int, Int)
+      }
+  deriving stock (Eq, Show)
+
+makeLenses ''TermState
+
+type ViwrapEff effs
+  = Members '[HandleAct , Logger , Reader Env , State ViwrapState , Terminal] effs
