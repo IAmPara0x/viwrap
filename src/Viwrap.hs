@@ -2,12 +2,15 @@ module Viwrap
   ( launch
   ) where
 
-import Control.Monad              (void, zipWithM_)
+import Control.Concurrent         (MVar, newMVar, putMVar, takeMVar)
+import Control.Monad              (void, when, zipWithM_)
 import Control.Monad.Freer        (Eff, runM, sendM)
 import Control.Monad.Freer.Reader (ask, runReader)
 import Control.Monad.Freer.State  (evalState, get, modify)
 import Data.ByteString            (ByteString)
 import Data.ByteString            qualified as BS
+import Data.ByteString.Internal   qualified as BS
+import Data.Default               (def)
 import Data.Maybe                 (isNothing)
 
 import Lens.Micro                 ((&), (.~))
@@ -16,16 +19,14 @@ import System.IO                  qualified as IO
 import System.IO                  (BufferMode (..), hSetBuffering)
 import System.Posix               qualified as IO
 import System.Posix.Signals       qualified as Signals
-import System.Posix.Signals       (Handler (Catch))
+import System.Posix.Signals       (Handler (Catch), Signal)
 import System.Posix.Signals.Exts  qualified as Signals
 import System.Posix.Terminal      qualified as Terminal
 import System.Posix.Terminal      (TerminalMode (..))
-import System.Process             (ProcessHandle)
+import System.Process             (Pid, ProcessHandle)
 
 import Text.Printf                (printf)
 
-import Control.Concurrent         (MVar, newMVar, putMVar, takeMVar)
-import Data.Default               (def)
 import System.Console.ANSI        qualified as ANSI
 import System.Posix               (Fd)
 import Viwrap.Logger
@@ -61,19 +62,26 @@ handleMaster mcontent = do
     Nothing      -> modify (prevMasterContent .~ mempty)
   handleVIHook
 
+handleStdIn :: ViwrapEff effs => Maybe ByteString -> Eff effs ()
+handleStdIn Nothing        = pure ()
+handleStdIn (Just content) = do
+
+  VIState { _viMode } <- _viState <$> get
+
+  when (BS.singleton (BS.c2w '\EOT') == content) $ modify (recievedCtrlD .~ True)
+
+  -- TODO: currently assume that the content is just a single character, however this may not be always true
+  -- therefore we would require some sort of batch processing.
+
+  keyAction defKeyMap _viMode $ BS.head content
+
 pollMasterFd :: forall effs . ViwrapEff effs => ProcessHandle -> Eff effs ()
 pollMasterFd ph = do
 
   stdin   <- snd <$> getStdin
   hMaster <- snd . _masterPty <$> ask
 
-  let handleStdIn :: Maybe ByteString -> Eff effs ()
-      handleStdIn Nothing        = pure ()
-      handleStdIn (Just content) = do
-        VIState { _viMode } <- _viState <$> get
-        keyAction defKeyMap _viMode $ BS.head content
-
-      poll :: Eff effs ()
+  let poll :: Eff effs ()
       poll = do
 
         mExitCode <- isProcessDead ph
@@ -86,10 +94,13 @@ pollMasterFd ph = do
 
           Nothing -> do
 
-            ViwrapState { _isPromptUp, _currentPollRate } <- get
+            ViwrapState { _isPromptUp, _currentPollRate, _recievedCtrlD } <- get
 
-            results <- pselect [hMaster, stdin]
-              $ if _isPromptUp then Infinite else Wait _currentPollRate
+            results <- if
+              | _recievedCtrlD -> pselect [hMaster] Immediately
+              | _isPromptUp    -> pselect [hMaster, stdin] Infinite
+              | otherwise      -> pselect [hMaster, stdin] $ Wait _currentPollRate
+
 
             zipWithM_ ($) [handleMaster, handleStdIn] results
 
@@ -111,6 +122,11 @@ sigWINCHHandler termStateMVar fdMaster = Catch do
   TermSize {..} <- getTermSize IO.stdInput
   putMVar termStateMVar (termState { _getTermSize = Just (termHeight, termWidth) })
 
+passOnSignal :: Pid -> Signal -> Handler
+passOnSignal pid signal = Catch do
+  Signals.signalProcess signal pid
+
+
 initialise :: IO Initialized
 initialise = do
   (fdMaster, fdSlave) <- Terminal.openPseudoTerminal
@@ -125,13 +141,18 @@ initialise = do
   void $ Signals.installHandler Signals.sigWINCH (sigWINCHHandler mvar fdMaster) Nothing
 
   let renv :: Env
-      renv = Env { _envCmd         = "stack"
-                 , _envCmdArgs     = ["ghci"]
+      renv = Env { _envCmd         = "ghci"
+                 , _envCmdArgs     = []
                  , _envPollingRate = 20000
                  , _envBufferSize  = 2048
                  , _logFile        = "log.txt"
                  , _masterPty      = (fdMaster, hMaster)
                  , _slavePty       = (fdSlave, hSlave)
+
+                 -- TODO: There should be two kinds of Env first one containing all the user config, Cmd, args
+                 -- etc. The second Env would be created after we "setup" everything i.e. forked the process
+                 -- install all the handlers, etc.
+                 , _slavePid       = undefined
                  }
 
       setup = do
@@ -140,17 +161,22 @@ initialise = do
         newSize <- sendM $ getTermSize fdMaster
         logPty ["SetTermSize"] $ printf "FD: %s, New TermSize: %s" (show fdMaster) (show newSize)
 
-        ph             <- forkAndExecCmdIO
+        (ph, pid)      <- forkAndExecCmdIO
 
         masterTermAttr <- getTerminalAttrIO fdMaster
         setTerminalAttrIO IO.stdInput masterTermAttr Terminal.Immediately
         uninstallTerminalModes IO.stdInput [EnableEcho, ProcessInput] Terminal.Immediately
 
-        pure ph
+        pure (ph, pid)
 
-  ph <- runM $ runReader renv $ runLoggerIO [PtyCtx] setup
+  (ph, pid) <- runM $ runReader renv $ runLoggerIO [PtyCtx] setup
 
-  pure $ Initialized { initialEnv = renv, slaveProcessHandle = ph, termStateMVar = mvar }
+  void $ Signals.installHandler Signals.sigINT (passOnSignal pid Signals.sigINT) Nothing
+
+  pure $ Initialized { initialEnv         = renv { _slavePid = pid }
+                     , slaveProcessHandle = ph
+                     , termStateMVar      = mvar
+                     }
 
 cleanup :: Env -> IO ()
 cleanup Env {..} = do
@@ -166,7 +192,7 @@ launch = do
     & evalState (def :: ViwrapState)
     & runTerminalIO
     & evalState termStateMVar
-    & runLoggerIO [OutputCtx, PollCtx, VICtx]
+    & runLoggerIO [OutputCtx, PollCtx, VICtx, OtherCtx]
     & runReader initialEnv
     & runM
   cleanup initialEnv

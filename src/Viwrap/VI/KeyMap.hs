@@ -36,6 +36,7 @@ defKeyMap = Map.mapKeys (fmap BS.c2w) $ Map.fromList
 
        -- Insert Mode KeyMap
   , ((Insert, '\f'), insertNoUpdate $ BS.singleton $ BS.c2w '\f')
+  , ((Insert, '\EOT'), insertNoUpdate $ BS.singleton $ BS.c2w '\EOT')
   , ((Insert, '\t')  , handleTab)
   , ((Insert, '\n')  , handleNewline)
   , ((Insert, '\ESC'), toNormalMode)

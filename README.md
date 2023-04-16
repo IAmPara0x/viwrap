@@ -17,7 +17,9 @@
 - [ ] Fix Jittery cursor
 - [ ] Implement Advance vim editting features
 - [ ] Figure out a better way to handle colored prompt
+
 - [ ] Install signal handlers
+  - [ ] install and integrate SIGINT
 
 - [ ] improve the algorithm to find where to insert the text such that it requires less calls to
       termsize and cursor position
@@ -40,6 +42,8 @@
 - [ ] Implement Advance vim editting features
 - [ ] Improve ANSI escape sequence parser
 - [ ] Find a way to find Jittery cursor.
+- [ ] Install signal handlers
+  - [ ] install and integrate SIGINT
 
 ## Questions
 

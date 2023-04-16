@@ -54,6 +54,7 @@ library
       GADTs
       ImportQualifiedPost
       LambdaCase
+      MultiWayIf
       OverloadedStrings
       RecordWildCards
       ScopedTypeVariables
@@ -94,6 +95,7 @@ executable viwrap-exe
       GADTs
       ImportQualifiedPost
       LambdaCase
+      MultiWayIf
       OverloadedStrings
       RecordWildCards
       ScopedTypeVariables
@@ -132,6 +134,7 @@ test-suite viwrap-test
       GADTs
       ImportQualifiedPost
       LambdaCase
+      MultiWayIf
       OverloadedStrings
       RecordWildCards
       ScopedTypeVariables

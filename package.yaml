@@ -48,6 +48,7 @@ default-extensions:
 - GADTs
 - ImportQualifiedPost
 - LambdaCase
+- MultiWayIf 
 - OverloadedStrings
 - RecordWildCards
 - ScopedTypeVariables

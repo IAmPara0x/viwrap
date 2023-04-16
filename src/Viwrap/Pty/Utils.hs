@@ -15,6 +15,7 @@ import Control.Monad.Freer          (Eff, LastMember, Members, sendM)
 import Control.Monad.Freer.Reader   (Reader, ask)
 
 import Data.ByteString              (ByteString)
+import Data.Maybe                   (fromMaybe)
 
 import System.IO                    qualified as IO
 import System.IO                    (Handle)
@@ -23,7 +24,7 @@ import System.Posix.IO.ByteString   qualified as IO
 import System.Posix.Terminal        qualified as Terminal
 import System.Posix.Terminal        (TerminalAttributes, TerminalMode (..), TerminalState)
 import System.Process               qualified as Process
-import System.Process               (CreateProcess (..), ProcessHandle, StdStream (..))
+import System.Process               (CreateProcess (..), Pid, ProcessHandle, StdStream (..))
 
 import Text.ParserCombinators.ReadP (readP_to_S)
 import Text.Printf                  (printf)
@@ -106,7 +107,7 @@ fdCloseIO :: (Members '[Logger] effs, LastMember IO effs) => Fd -> Eff effs ()
 fdCloseIO fd = logPty ["FdClose"] (printf "closing fd: %s" $ show fd) >> sendM (IO.closeFd fd)
 
 forkAndExecCmdIO
-  :: (Members '[Logger , Reader Env] effs, LastMember IO effs) => Eff effs ProcessHandle
+  :: (Members '[Logger , Reader Env] effs, LastMember IO effs) => Eff effs (ProcessHandle, Pid)
 forkAndExecCmdIO = do
   Env { _envCmd, _envCmdArgs, _slavePty = (_, sHandle) } <- ask
 
@@ -120,7 +121,9 @@ forkAndExecCmdIO = do
       , std_in        = UseHandle sHandle
       , new_session   = True
       }
-  pure ph
+
+  pid <- fromMaybe (error "ERROR: the slave process got closed") <$> sendM (Process.getPid ph)
+  pure (ph, pid)
 
 getTerminalAttrIO
   :: (Members '[Logger] effs, LastMember IO effs) => Fd -> Eff effs TerminalAttributes

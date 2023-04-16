@@ -28,6 +28,8 @@ module Viwrap.Pty
   , masterPty
   , prevMasterContent
   , pselect
+  , recievedCtrlD
+  , slavePid
   , slavePty
   , termCursorPos
   , termSize
@@ -49,7 +51,7 @@ import Lens.Micro.TH              (makeLenses)
 import System.Exit                (ExitCode)
 import System.IO                  (Handle)
 import System.Posix               (Fd)
-import System.Process             (ProcessHandle)
+import System.Process             (Pid, ProcessHandle)
 
 import Viwrap.Logger              (Logger)
 import Viwrap.VI
@@ -80,6 +82,7 @@ data Env
       , _logFile        :: FilePath
       , _masterPty      :: (Fd, Handle)
       , _slavePty       :: (Fd, Handle)
+      , _slavePid       :: Pid
       }
   deriving stock (Show)
 
@@ -94,6 +97,7 @@ data ViwrapState
   = ViwrapState
       { _isPromptUp        :: Bool
       , _childStatus       :: Child
+      , _recievedCtrlD     :: Bool
       , _prevMasterContent :: ByteString
       , _viHooks           :: Seq VIHook
       , _currentPollRate   :: Int
@@ -110,6 +114,7 @@ instance Default ViwrapState where
                     , _viHooks           = mempty
                     , _currentPollRate   = 10000
                     , _viState           = def
+                    , _recievedCtrlD     = False
                     }
 
 data Terminal a where
