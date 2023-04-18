@@ -1,5 +1,6 @@
 module Viwrap.VI
   ( AutoComplete (..)
+  , VIConfig (..)
   , VIHook (..)
   , VILine
   , VILines
@@ -50,3 +51,12 @@ instance Default VIState where
   def = VIState { _viMode = Insert, _prevLines = mempty, _currentLine = mempty }
 
 makeLenses ''VIState
+
+newtype VIConfig
+  = VIConfig { _tabWidth :: Int }
+  deriving stock (Eq, Show)
+
+instance Default VIConfig where
+  def = VIConfig { _tabWidth = 2 }
+
+makeLenses ''VIConfig

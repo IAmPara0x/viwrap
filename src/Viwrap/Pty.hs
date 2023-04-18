@@ -8,14 +8,13 @@ module Viwrap.Pty
   , Timeout (..)
   , ViwrapEff
   , ViwrapState (..)
-  , cacheCursorPos
   , childStatus
-  , clearCacheCursorPos
   , currentPollRate
   , envBufferSize
   , envCmd
   , envCmdArgs
   , envPollingRate
+  , getSignalReceived
   , getStderr
   , getStdin
   , getStdout
@@ -29,6 +28,7 @@ module Viwrap.Pty
   , prevMasterContent
   , pselect
   , recievedCtrlD
+  , signalReceived
   , slavePid
   , slavePty
   , termCursorPos
@@ -51,6 +51,7 @@ import Lens.Micro.TH              (makeLenses)
 import System.Exit                (ExitCode)
 import System.IO                  (Handle)
 import System.Posix               (Fd)
+import System.Posix.Signals       (Signal)
 import System.Process             (Pid, ProcessHandle)
 
 import Viwrap.Logger              (Logger)
@@ -120,15 +121,15 @@ instance Default ViwrapState where
 data Terminal a where
   TermSize :: Terminal (Int, Int)
   TermCursorPos :: Terminal (Int, Int)
-  CacheCursorPos :: (Int, Int) -> Terminal ()
-  ClearCacheCursorPos :: Terminal ()
+  SignalReceived :: Terminal (Maybe Signal)
 
 makeEffect ''Terminal
 
 data TermState
   = TermState
-      { _getTermSize      :: Maybe (Int, Int)
-      , _getTermCursorPos :: Maybe (Int, Int)
+      { _getTermSize       :: Maybe (Int, Int)
+      , _getTermCursorPos  :: Maybe (Int, Int)
+      , _getSignalReceived :: Maybe Signal
       }
   deriving stock (Eq, Show)
 

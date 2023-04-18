@@ -2,7 +2,7 @@ module Viwrap
   ( launch
   ) where
 
-import Control.Concurrent         (MVar, newMVar, putMVar, takeMVar)
+import Control.Concurrent         (MVar, newMVar)
 import Control.Monad              (void, when, zipWithM_)
 import Control.Monad.Freer        (Eff, runM, sendM)
 import Control.Monad.Freer.Reader (ask, runReader)
@@ -19,22 +19,21 @@ import System.IO                  qualified as IO
 import System.IO                  (BufferMode (..), hSetBuffering)
 import System.Posix               qualified as IO
 import System.Posix.Signals       qualified as Signals
-import System.Posix.Signals       (Handler (Catch), Signal)
 import System.Posix.Signals.Exts  qualified as Signals
 import System.Posix.Terminal      qualified as Terminal
 import System.Posix.Terminal      (TerminalMode (..))
-import System.Process             (Pid, ProcessHandle)
+import System.Process             (ProcessHandle)
 
 import Text.Printf                (printf)
 
 import System.Console.ANSI        qualified as ANSI
-import System.Posix               (Fd)
 import Viwrap.Logger
 import Viwrap.Logger.Handler      (runLoggerIO)
 import Viwrap.Pty                 hiding (Terminal (..), getTermSize)
 import Viwrap.Pty.Handler         (runHandleActIO, runTerminalIO)
-import Viwrap.Pty.TermSize        (TermSize (..), getTermSize, setTermSize)
+import Viwrap.Pty.TermSize        (getTermSize, setTermSize)
 import Viwrap.Pty.Utils
+import Viwrap.Signals             (passOnSignal, posixSignalHook, sigWINCHHandler)
 import Viwrap.VI
 import Viwrap.VI.Handler          (handleVIHook)
 import Viwrap.VI.KeyMap           (defKeyMap, keyAction)
@@ -102,6 +101,7 @@ pollMasterFd ph = do
               | otherwise      -> pselect [hMaster, stdin] $ Wait _currentPollRate
 
 
+            posixSignalHook
             zipWithM_ ($) [handleMaster, handleStdIn] results
 
             poll
@@ -115,16 +115,6 @@ data Initialized
       , termStateMVar      :: MVar TermState
       }
 
-sigWINCHHandler :: MVar TermState -> Fd -> Handler
-sigWINCHHandler termStateMVar fdMaster = Catch do
-  setTermSize IO.stdInput fdMaster
-  termState     <- takeMVar termStateMVar
-  TermSize {..} <- getTermSize IO.stdInput
-  putMVar termStateMVar (termState { _getTermSize = Just (termHeight, termWidth) })
-
-passOnSignal :: Pid -> Signal -> Handler
-passOnSignal pid signal = Catch do
-  Signals.signalProcess signal pid
 
 
 initialise :: IO Initialized
@@ -136,12 +126,15 @@ initialise = do
 
   size              <- ANSI.hGetTerminalSize IO.stdout
   cursorPos         <- ANSI.hGetCursorPosition IO.stdout
-  mvar              <- newMVar TermState { _getTermSize = size, _getTermCursorPos = cursorPos }
+  mvar              <- newMVar TermState { _getTermSize       = size
+                                         , _getTermCursorPos  = cursorPos
+                                         , _getSignalReceived = Nothing
+                                         }
 
   void $ Signals.installHandler Signals.sigWINCH (sigWINCHHandler mvar fdMaster) Nothing
 
   let renv :: Env
-      renv = Env { _envCmd         = "ghci"
+      renv = Env { _envCmd         = "python"
                  , _envCmdArgs     = []
                  , _envPollingRate = 20000
                  , _envBufferSize  = 2048
@@ -171,7 +164,7 @@ initialise = do
 
   (ph, pid) <- runM $ runReader renv $ runLoggerIO [PtyCtx] setup
 
-  void $ Signals.installHandler Signals.sigINT (passOnSignal pid Signals.sigINT) Nothing
+  void $ Signals.installHandler Signals.sigINT (passOnSignal pid Signals.sigINT mvar) Nothing
 
   pure $ Initialized { initialEnv         = renv { _slavePid = pid }
                      , slaveProcessHandle = ph
@@ -192,7 +185,7 @@ launch = do
     & evalState (def :: ViwrapState)
     & runTerminalIO
     & evalState termStateMVar
-    & runLoggerIO [OutputCtx, PollCtx, VICtx, OtherCtx]
+    & runLoggerIO [VICtx]
     & runReader initialEnv
     & runM
   cleanup initialEnv

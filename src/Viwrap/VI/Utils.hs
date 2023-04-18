@@ -73,7 +73,6 @@ data Cursor
   deriving stock (Eq, Show)
 
 
-
 -- 'moveCursor' is the general function that moves the cursor to the desired position
 -- in stdout, we need this function because to take into account the line wrapping which happens
 -- when a single line is very long, hence in that case we have to much the cursor vertically and horizontally
@@ -104,4 +103,3 @@ moveCursor cursor       = do
                      | otherwise        -> (row - vertMove - 1, col + width - horizMove)
 
   writeStdout (fromString $ ANSI.setCursorPositionCode nrow ncol)
-  cacheCursorPos (nrow, ncol)

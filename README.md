@@ -26,12 +26,16 @@
 
 - [ ] Document the code
 
+- [ ] Make Viwrap more robust
+
 ### Bugs
 
 - [X] (B1) When we exit slave process there's hardware error due to master FD reading the input, figure out what's happening and fix it.
 - [X] ghci doesn't work with viwrap
 - [X] Can't get terminal size reliably
 - [X] sometimes doesn't show cursor when it's at beginning and there's no text
+- [X] sometimes the current line doesn't get added to the line history
+- [ ] sometimes viwrap becomes un responsive (most likely due to mvar)
 - [ ] Spago repl doesn't work
 - [ ] Can't get cursor position reliably
 - [ ] ghci doesn't wrap lined when using viwrap

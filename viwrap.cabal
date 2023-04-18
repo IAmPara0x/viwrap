@@ -37,6 +37,7 @@ library
       Viwrap.Pty.Handler
       Viwrap.Pty.TermSize
       Viwrap.Pty.Utils
+      Viwrap.Signals
       Viwrap.VI
       Viwrap.VI.Handler
       Viwrap.VI.KeyMap

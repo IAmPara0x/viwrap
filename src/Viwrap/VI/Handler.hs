@@ -72,8 +72,7 @@ insertBS inputBS = do
   modify (currentPollRate .~ div pollingRate 2)
   addHook SyncCursor
 
-  r <- _viState <$> get
-  logVI logLabels $ show r
+  logVI logLabels . show . (^. currentLine) . _viState =<< get
 
 insertNoUpdate :: (ViwrapEff effs) => ByteString -> Eff effs ()
 insertNoUpdate inputBS = do
@@ -96,34 +95,34 @@ insertNoUpdate inputBS = do
   modify (currentPollRate .~ div pollingRate 2)
   addHook SyncCursor
 
-  r <- _viState <$> get
-  logVI logLabels $ show r
+  logVI logLabels . show . (^. currentLine) . _viState =<< get
 
 moveLeft :: (ViwrapEff effs) => Int -> Eff effs ()
 moveLeft n = do
 
   VIState {..} <- _viState <$> get
 
-  let movePos = min n $ BS.length (_zipperCrumbs _currentLine)
+  let movePos   = min n $ BS.length (_zipperCrumbs _currentLine)
+      logLabels = ["moveLeft"]
 
   modify (viState . currentLine %~ backwardZipper n)
 
   moveCursor (Backward movePos)
 
-  r <- _viState <$> get
-  logVI ["moveLeft"] $ show r
+  logVI logLabels . show . (^. currentLine) . _viState =<< get
 
 moveRight :: (ViwrapEff effs) => Int -> Eff effs ()
 moveRight n = do
 
   VIState {..} <- _viState <$> get
 
-  let movePos = min n $ BS.length (_zipperFocus _currentLine)
+  let movePos   = min n $ BS.length (_zipperFocus _currentLine)
+      logLabels = ["moveRight"]
+
   modify (viState . currentLine %~ forwardZipper n)
 
   moveCursor (Forward movePos)
-  r <- _viState <$> get
-  logVI ["moveRight"] $ show r
+  logVI logLabels . show . (^. currentLine) . _viState =<< get
 
 backspace :: (ViwrapEff effs) => Eff effs ()
 backspace = do
@@ -138,7 +137,8 @@ backspace = do
 
       modify (viState . currentLine %~ deleteZipper)
 
-      let movePos = BS.length $ _zipperFocus _currentLine
+      let movePos   = BS.length $ _zipperFocus _currentLine
+          logLabels = ["backspace"]
 
       eraseAndWrite hmaster (movePos + 1) (_zipperFocus _currentLine)
       writeStdout (fromString ANSI.hideCursorCode)
@@ -148,8 +148,7 @@ backspace = do
       addHook SyncCursor
       modify (currentPollRate .~ div pollingRate 2)
 
-      r <- _viState <$> get
-      logVI ["backspace"] $ show r
+      logVI logLabels . show . (^. currentLine) . _viState =<< get
 
 moveToBeginning :: ViwrapEff effs => Eff effs ()
 moveToBeginning = do
@@ -166,13 +165,28 @@ handleNewline = do
 
   VIState {..} <- _viState <$> get
 
+  when
+    (not (null $ _zipperFocus _prevLines) && _viMode == Normal)
+    do
+
+    -- we have to ensure that we are at the end of our history, this is necessary
+    -- because let's say the user is scrolling through history and then they
+    -- again 'entered' that same line present in the history withtout going in the insert mode
+    -- but our history is not at the end.
+      modify (viState . prevLines %~ forwardZipper (Seq.length $ _zipperFocus _prevLines))
+
+      -- remove the current line that was added when we insert into the insert mode
+      modify (viState . prevLines %~ deleteZipper)
+
   writeMaster "\n"
 
   logVI ["handleNewline"] "Received '\\n' setting the VI line to initial state"
 
   when (_currentLine /= mempty)
     $ modify (viState . prevLines %~ insertZipper (Seq.singleton _currentLine))
+
   modify (viState . currentLine .~ mempty)
+  modify (viState . viMode .~ Insert)
   modify (isPromptUp .~ False)
   addHook SyncCursor
 
@@ -291,7 +305,10 @@ toInsertMode :: ViwrapEff effs => Eff effs ()
 toInsertMode = do
   toMode Insert
   VIState { _prevLines } <- _viState <$> get
+
   modify (viState . prevLines %~ forwardZipper (Seq.length $ _zipperFocus _prevLines))
+
+  -- remove the current line that was added when we insert into the insert mode
   modify (viState . prevLines %~ deleteZipper)
 
 toNormalMode :: ViwrapEff effs => Eff effs ()

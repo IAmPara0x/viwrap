@@ -100,18 +100,13 @@ runTerminalIO = reinterpret $ \case
 
   TermCursorPos -> do
     fromJust <$> hGetCursorPosition stdout
-    -- mTermCursorPos <- fmap _getTermCursorPos . sendM . readMVar =<< get
-    -- case mTermCursorPos of
-    --   (Just pos) -> pure pos
-    --   Nothing -> fromJust <$> sendM (ANSI.hGetCursorPosition stdout)
 
-  CacheCursorPos pos -> do
-    (termStateMVar :: MVar TermState) <- get
-    termState                         <- sendM (takeMVar termStateMVar)
-    sendM $ putMVar termStateMVar (termState { _getTermCursorPos = Just pos })
+  SignalReceived -> do
+    termStateMVar <- get
 
-  ClearCacheCursorPos -> do
-    (termStateMVar :: MVar TermState) <- get
-    termState                         <- sendM (takeMVar termStateMVar)
-    newPos                            <- sendM (ANSI.hGetCursorPosition stdout)
-    sendM $ putMVar termStateMVar (termState { _getTermCursorPos = newPos })
+    termState     <- sendM (takeMVar termStateMVar)
+
+    case _getSignalReceived termState of
+      Nothing       -> sendM (putMVar termStateMVar termState) >> pure Nothing
+      (Just signal) -> sendM (putMVar termStateMVar termState { _getSignalReceived = Nothing })
+        >> pure (Just signal)
