@@ -28,6 +28,8 @@
 
 - [ ] Make Viwrap more robust
 
+- [ ] Implement test suite
+
 ### Bugs
 
 - [X] (B1) When we exit slave process there's hardware error due to master FD reading the input, figure out what's happening and fix it.
@@ -36,6 +38,7 @@
 - [X] sometimes doesn't show cursor when it's at beginning and there's no text
 - [X] sometimes the current line doesn't get added to the line history
 - [ ] sometimes viwrap becomes un responsive (most likely due to mvar)
+- [?] Movement through line history is very buggy
 - [ ] Spago repl doesn't work
 - [ ] Can't get cursor position reliably
 - [ ] ghci doesn't wrap lined when using viwrap
@@ -51,8 +54,8 @@
 
 ## Questions
 
-- [ ] can we get controlling terminal for the slave proceess?
-	  - But why do we even need a controling terminal?
+- [X] can we get controlling terminal for the slave proceess?
+	  - [?] But why do we even need a controling terminal?
 
 - [ ] How to identify when the prompt is up?
 
@@ -60,6 +63,8 @@
 
 - [ ] Check If we can implement batching such that we take multiple input at a time and process it.
 
+- [ ] How should we test viwrap?
+
 ### Remarks
 
-- There's no need for VIEdit
+- [X] There's no need for VIEdit

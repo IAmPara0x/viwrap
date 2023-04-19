@@ -82,7 +82,7 @@ library
   else
     ghc-options: -Wwarn
 
-executable viwrap-exe
+executable viwrap
   main-is: Main.hs
   other-modules:
       Paths_viwrap

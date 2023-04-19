@@ -202,16 +202,21 @@ handleTab = do
       writeMaster (BS.singleton 9)
       addHook TabPressed
 
+-- TODO: implement this
 moveToPrevLine :: ViwrapEff effs => Eff effs ()
 moveToPrevLine = do
 
-  s@VIState {..} <- _viState <$> get
+  let logLabels = ["moveToPrevLine"]
 
-  logVI ["moveToPrevLine"] $ printf "vistate: %s" (show s)
+  VIState {..} <- _viState <$> get
 
   case _zipperCrumbs _prevLines of
-    Empty          -> pure ()
-    prevLine :<| _ -> do
+    Empty            -> pure ()
+    (prevLine :<| _) -> do
+
+      modify (viState . prevLines %~ backwardZipper 1)
+
+      logVI logLabels $ printf "setting current line to: %s" (show prevLine)
       Env { _masterPty = (_, hmaster), _envPollingRate = pollingRate } <- ask
 
       let currentContent = contentZipper _currentLine
@@ -222,24 +227,31 @@ moveToPrevLine = do
       writeStdout $ fromString ANSI.hideCursorCode
       moveCursor (Forward $ BS.length $ _zipperFocus _currentLine)
 
-      modify (viState . prevLines %~ backwardZipper 1)
       modify (viState . currentLine .~ prevLine)
       modify (currentPollRate .~ div pollingRate 2)
 
       addHook SyncCursor
 
+-- TODO: implement this
 moveToNextLine :: ViwrapEff effs => Eff effs ()
 moveToNextLine = do
 
-  modify (viState . prevLines %~ forwardZipper 1)
 
-  s@VIState {..} <- _viState <$> get
+  let logLabels = ["moveToNextLine"]
 
-  logVI ["moveToNextLine"] $ printf "vistate: %s" (show s)
+  VIState {..} <- _viState <$> get
 
-  case _zipperFocus _prevLines of
-    Empty          -> pure ()
-    nextLine :<| _ -> do
+  -- get all the lines that are in the front of the history currently, since
+  -- the 1st element of the zipperFocus is always the current element we drop that element
+  let futureLines = Seq.drop 1 $ _zipperFocus _prevLines
+
+  case futureLines of
+    Empty            -> pure ()
+    (nextLine :<| _) -> do
+
+      modify (viState . prevLines %~ forwardZipper 1)
+      logVI logLabels $ printf "setting current line to: %s" (show nextLine)
+
       Env { _masterPty = (_, hmaster), _envPollingRate = pollingRate } <- ask
 
       let currentContent = contentZipper _currentLine
@@ -306,8 +318,9 @@ toInsertMode = do
   toMode Insert
   VIState { _prevLines } <- _viState <$> get
 
+  -- Move to the end of the history
   modify (viState . prevLines %~ forwardZipper (Seq.length $ _zipperFocus _prevLines))
-
+  --
   -- remove the current line that was added when we insert into the insert mode
   modify (viState . prevLines %~ deleteZipper)
 
@@ -316,7 +329,7 @@ toNormalMode = do
   toMode Normal
   moveLeft 1
   VIState { _currentLine } <- _viState <$> get
-  modify (viState . prevLines %~ appendZipper (Seq.singleton _currentLine))
+  modify (viState . prevLines . zipperFocus .~ Seq.singleton _currentLine)
 
 toMode :: ViwrapEff effs => VIMode -> Eff effs ()
 toMode mode = modify (viState . viMode .~ mode)

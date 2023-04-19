@@ -86,7 +86,7 @@ library:
 language: GHC2021
 
 executables:
-  viwrap-exe:
+  viwrap:
     main:                Main.hs
     source-dirs:         app
     ghc-options:

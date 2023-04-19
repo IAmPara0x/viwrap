@@ -15,6 +15,8 @@ import Data.Maybe                 (isNothing)
 
 import Lens.Micro                 ((&), (.~))
 
+import System.Console.ANSI        qualified as ANSI
+import System.Environment         (getArgs)
 import System.IO                  qualified as IO
 import System.IO                  (BufferMode (..), hSetBuffering)
 import System.Posix               qualified as IO
@@ -26,9 +28,8 @@ import System.Process             (ProcessHandle)
 
 import Text.Printf                (printf)
 
-import System.Console.ANSI        qualified as ANSI
 import Viwrap.Logger
-import Viwrap.Logger.Handler      (runLoggerIO)
+import Viwrap.Logger.Handler      (runLoggerIO, runLoggerUnit)
 import Viwrap.Pty                 hiding (Terminal (..), getTermSize)
 import Viwrap.Pty.Handler         (runHandleActIO, runTerminalIO)
 import Viwrap.Pty.TermSize        (getTermSize, setTermSize)
@@ -119,6 +120,9 @@ data Initialized
 
 initialise :: IO Initialized
 initialise = do
+
+  (cmd     , args   ) <- (\a -> (head a, tail a)) <$> getArgs
+
   (fdMaster, fdSlave) <- Terminal.openPseudoTerminal
   hSetBuffering IO.stdin  NoBuffering
   hSetBuffering IO.stdout NoBuffering
@@ -134,8 +138,8 @@ initialise = do
   void $ Signals.installHandler Signals.sigWINCH (sigWINCHHandler mvar fdMaster) Nothing
 
   let renv :: Env
-      renv = Env { _envCmd         = "python"
-                 , _envCmdArgs     = []
+      renv = Env { _envCmd         = cmd
+                 , _envCmdArgs     = args
                  , _envPollingRate = 20000
                  , _envBufferSize  = 2048
                  , _logFile        = "log.txt"
@@ -185,7 +189,7 @@ launch = do
     & evalState (def :: ViwrapState)
     & runTerminalIO
     & evalState termStateMVar
-    & runLoggerIO [VICtx]
+    & runLoggerUnit
     & runReader initialEnv
     & runM
   cleanup initialEnv
