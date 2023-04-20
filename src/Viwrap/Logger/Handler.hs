@@ -14,19 +14,16 @@ import Viwrap.Pty
 -- Handlers for logger
 runLoggerUnit :: Eff (Logger ': effs) a -> Eff effs a
 runLoggerUnit = interpret $ \case
-  LogM{} -> return ()
+  LogM{} -> pure ()
 
 runLoggerIO
-  :: (Members '[Reader Env] effs, LastMember IO effs)
-  => [LogContext]
-  -> Eff (Logger ': effs) a
-  -> Eff effs a
-runLoggerIO ctxs = interpret $ \case
-  LogM ctx args str -> when
-    (ctx `elem` ctxs)
-    do
-      Env { _logFile } <- ask
-      sendM $ appendFile _logFile $ logStr args str
+  :: (Members '[Reader Env] effs, LastMember IO effs) => Eff (Logger ': effs) a -> Eff effs a
+runLoggerIO = interpret $ \case
+  LogM ctx args str -> do
+
+    Env { _logFile, _logCtxs } <- ask
+
+    when (ctx `elem` _logCtxs) $ sendM $ appendFile _logFile $ logStr args str
 
 logStr :: [String] -> String -> String
 logStr []       str = str <> "\n"

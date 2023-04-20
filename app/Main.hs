@@ -1,6 +1,8 @@
-module Main (main) where
+module Main
+  ( main
+  ) where
 
-import Viwrap
+import           Viwrap
 
 main :: IO ()
 main = launch

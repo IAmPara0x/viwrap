@@ -21,15 +21,14 @@ module Viwrap.Pty
   , getTermCursorPos
   , getTermSize
   , hWrite
-  , isProcessDead
   , isPromptUp
+  , logCtxs
   , logFile
   , masterPty
   , prevMasterContent
   , pselect
   , recievedCtrlD
   , signalReceived
-  , slavePid
   , slavePty
   , termCursorPos
   , termSize
@@ -48,13 +47,11 @@ import Data.Sequence              (Seq)
 
 import Lens.Micro.TH              (makeLenses)
 
-import System.Exit                (ExitCode)
 import System.IO                  (Handle)
 import System.Posix               (Fd)
 import System.Posix.Signals       (Signal)
-import System.Process             (Pid, ProcessHandle)
 
-import Viwrap.Logger              (Logger)
+import Viwrap.Logger              (LogContext, Logger)
 import Viwrap.VI
 
 
@@ -65,12 +62,11 @@ data Timeout
   deriving stock (Show)
 
 data HandleAct a where
-  GetStderr :: HandleAct (Fd, Handle)
-  GetStdin :: HandleAct (Fd, Handle)
-  GetStdout :: HandleAct (Fd, Handle)
+  GetStderr :: HandleAct Handle
+  GetStdin :: HandleAct Handle
+  GetStdout :: HandleAct Handle
   HWrite :: Handle -> ByteString -> HandleAct ()
   Pselect :: [Handle] -> Timeout -> HandleAct [Maybe ByteString]
-  IsProcessDead :: ProcessHandle -> HandleAct (Maybe ExitCode)
 
 makeEffect ''HandleAct
 
@@ -83,7 +79,7 @@ data Env
       , _logFile        :: FilePath
       , _masterPty      :: (Fd, Handle)
       , _slavePty       :: (Fd, Handle)
-      , _slavePid       :: Pid
+      , _logCtxs        :: [LogContext]
       }
   deriving stock (Show)
 

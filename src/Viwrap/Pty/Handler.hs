@@ -1,5 +1,6 @@
 module Viwrap.Pty.Handler
-  ( runHandleActIO
+  ( pselectIO
+  , runHandleActIO
   , runTerminalIO
   ) where
 
@@ -17,7 +18,6 @@ import Data.Maybe                 (fromJust)
 
 import System.Console.ANSI        qualified as ANSI
 import System.IO                  (Handle, stderr, stdin, stdout)
-import System.Posix.IO.ByteString qualified as IO
 import System.Process             qualified as Process
 import System.Timeout             qualified as IO
 
@@ -36,10 +36,9 @@ runHandleActIO
 runHandleActIO = interpret $ \case
   Pselect handles timeout -> pselectIO handles timeout
   HWrite  handle  content -> hWriteIO handle content
-  GetStdin                -> pure (IO.stdInput, stdin)
-  GetStdout               -> pure (IO.stdOutput, stdout)
-  GetStderr               -> pure (IO.stdError, stderr)
-  IsProcessDead ph        -> sendM (Process.getProcessExitCode ph)
+  GetStdin                -> pure stdin
+  GetStdout               -> pure stdout
+  GetStderr               -> pure stderr
 
 pselectIO
   :: (Members '[Logger , Reader Env] effs, LastMember IO effs)

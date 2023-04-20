@@ -151,7 +151,7 @@ setTerminalAttrIO fd termAttr termState = do
 
 writeStdout :: (Members '[Reader Env , HandleAct] effs) => ByteString -> Eff effs ()
 writeStdout content = do
-  stdout <- snd <$> getStdout
+  stdout <- getStdout
   hWrite stdout content
 
 writeMaster :: (Members '[Reader Env , HandleAct] effs) => ByteString -> Eff effs ()

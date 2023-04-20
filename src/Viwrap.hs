@@ -1,9 +1,13 @@
 module Viwrap
-  ( launch
+  ( Initialized (..)
+  , cleanup
+  , initialise
+  , launch
+  , pollMasterFd
   ) where
 
 import Control.Concurrent         (MVar, newMVar)
-import Control.Monad              (void, when, zipWithM_)
+import Control.Monad              (forever, void, when, zipWithM_)
 import Control.Monad.Freer        (Eff, runM, sendM)
 import Control.Monad.Freer.Reader (ask, runReader)
 import Control.Monad.Freer.State  (evalState, get, modify)
@@ -29,28 +33,16 @@ import System.Process             (ProcessHandle)
 import Text.Printf                (printf)
 
 import Viwrap.Logger
-import Viwrap.Logger.Handler      (runLoggerIO, runLoggerUnit)
+import Viwrap.Logger.Handler      (runLoggerIO)
 import Viwrap.Pty                 hiding (Terminal (..), getTermSize)
 import Viwrap.Pty.Handler         (runHandleActIO, runTerminalIO)
 import Viwrap.Pty.TermSize        (getTermSize, setTermSize)
 import Viwrap.Pty.Utils
-import Viwrap.Signals             (passOnSignal, posixSignalHook, sigWINCHHandler)
+import Viwrap.Signals             (passOnSignal, posixSignalHook, sigCHLDHandler, sigWINCHHandler)
 import Viwrap.VI
 import Viwrap.VI.Handler          (handleVIHook)
 import Viwrap.VI.KeyMap           (defKeyMap, keyAction)
 
-
-handleDeadChild :: ViwrapEff effs => Eff effs ()
-handleDeadChild = do
-
-  hmaster <- snd . _masterPty <$> ask
-  result  <- pselect [hmaster] Immediately
-
-  let [mMasterContent] = result
-
-  case mMasterContent of
-    Nothing      -> logOther ["childDied"] "Read all the output from slave process, exiting now."
-    Just content -> writeStdout content >> handleDeadChild
 
 handleMaster :: ViwrapEff effs => Maybe ByteString -> Eff effs ()
 handleMaster mcontent = do
@@ -75,39 +67,21 @@ handleStdIn (Just content) = do
 
   keyAction defKeyMap _viMode $ BS.head content
 
-pollMasterFd :: forall effs . ViwrapEff effs => ProcessHandle -> Eff effs ()
-pollMasterFd ph = do
+pollMasterFd :: forall effs . ViwrapEff effs => Eff effs ()
+pollMasterFd = forever do
 
-  stdin   <- snd <$> getStdin
+  stdin   <- getStdin
   hMaster <- snd . _masterPty <$> ask
 
-  let poll :: Eff effs ()
-      poll = do
+  ViwrapState { _isPromptUp, _currentPollRate, _recievedCtrlD } <- get
 
-        mExitCode <- isProcessDead ph
+  results <- if
+    | _recievedCtrlD -> pure mempty
+    | _isPromptUp    -> pselect [hMaster, stdin] Infinite
+    | otherwise      -> pselect [hMaster, stdin] $ Wait _currentPollRate
 
-        case mExitCode of
-          (Just exitCode) -> do
-            logOther ["childDied"] $ printf "slave process exited with code: %s" (show exitCode)
-            handleDeadChild
-            modify (childStatus .~ Dead)
-
-          Nothing -> do
-
-            ViwrapState { _isPromptUp, _currentPollRate, _recievedCtrlD } <- get
-
-            results <- if
-              | _recievedCtrlD -> pselect [hMaster] Immediately
-              | _isPromptUp    -> pselect [hMaster, stdin] Infinite
-              | otherwise      -> pselect [hMaster, stdin] $ Wait _currentPollRate
-
-
-            posixSignalHook
-            zipWithM_ ($) [handleMaster, handleStdIn] results
-
-            poll
-  poll
-
+  posixSignalHook
+  zipWithM_ ($) [handleMaster, handleStdIn] results
 
 data Initialized
   = Initialized
@@ -115,7 +89,6 @@ data Initialized
       , slaveProcessHandle :: ProcessHandle
       , termStateMVar      :: MVar TermState
       }
-
 
 
 initialise :: IO Initialized
@@ -149,7 +122,7 @@ initialise = do
                  -- TODO: There should be two kinds of Env first one containing all the user config, Cmd, args
                  -- etc. The second Env would be created after we "setup" everything i.e. forked the process
                  -- install all the handlers, etc.
-                 , _slavePid       = undefined
+                 , _logCtxs        = [PollCtx, OutputCtx]
                  }
 
       setup = do
@@ -166,14 +139,15 @@ initialise = do
 
         pure (ph, pid)
 
-  (ph, pid) <- runM $ runReader renv $ runLoggerIO [PtyCtx] setup
+  (ph, pid) <- runM $ runReader renv $ runLoggerIO setup
 
   void $ Signals.installHandler Signals.sigINT (passOnSignal pid Signals.sigINT mvar) Nothing
 
-  pure $ Initialized { initialEnv         = renv { _slavePid = pid }
-                     , slaveProcessHandle = ph
-                     , termStateMVar      = mvar
-                     }
+  void $ Signals.installHandler Signals.sigCHLD
+                                (sigCHLDHandler renv (cleanup renv))
+                                (Just Signals.fullSignalSet)
+
+  pure $ Initialized { initialEnv = renv, slaveProcessHandle = ph, termStateMVar = mvar }
 
 cleanup :: Env -> IO ()
 cleanup Env {..} = do
@@ -185,11 +159,10 @@ launch :: IO ()
 launch = do
   Initialized {..} <- initialise
 
-  runHandleActIO (pollMasterFd slaveProcessHandle)
+  runHandleActIO pollMasterFd
     & evalState (def :: ViwrapState)
     & runTerminalIO
     & evalState termStateMVar
-    & runLoggerUnit
+    & runLoggerIO
     & runReader initialEnv
     & runM
-  cleanup initialEnv
