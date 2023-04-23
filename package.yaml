@@ -30,6 +30,7 @@ dependencies:
 - async
 - base >= 4.7 && < 5
 - bytestring
+- comonad
 - containers
 - data-default
 - freer-simple
@@ -37,8 +38,8 @@ dependencies:
 - megaparsec
 - microlens
 - microlens-th
+- text
 - unix
-- utf8-string
 
 default-extensions:
 - AllowAmbiguousTypes
@@ -96,7 +97,18 @@ executables:
     dependencies:
     - viwrap
 
-tests:
+  viwrap-capture:
+    main:                Main.hs
+    source-dirs:         viwrap-capture
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - aeson
+    - time
+    - viwrap
+
   viwrap-test:
     main:                Spec.hs
     source-dirs:         test
@@ -106,3 +118,4 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - viwrap
+    - knob

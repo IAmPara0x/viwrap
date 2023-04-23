@@ -1,0 +1,31 @@
+cradle:
+  cabal:
+    - path: "src"
+      component: "lib:viwrap"
+
+    - path: "app/Main.hs"
+      component: "viwrap:exe:viwrap"
+
+    - path: "app/Paths_viwrap.hs"
+      component: "viwrap:exe:viwrap"
+
+    - path: "viwrap-capture/Main.hs"
+      component: "viwrap:exe:viwrap-capture"
+
+    - path: "viwrap-capture/Capture/Viwrap/Pty/Handler.hs"
+      component: "viwrap:exe:viwrap-capture"
+
+    - path: "viwrap-capture/Paths_viwrap.hs"
+      component: "viwrap:exe:viwrap-capture"
+
+    - path: "test/Spec.hs"
+      component: "viwrap:exe:viwrap-test"
+
+    - path: "test/Simulate/Pty/Handler.hs"
+      component: "viwrap:exe:viwrap-test"
+
+    - path: "test/Test/Viwrap.hs"
+      component: "viwrap:exe:viwrap-test"
+
+    - path: "test/Paths_viwrap.hs"
+      component: "viwrap:exe:viwrap-test"

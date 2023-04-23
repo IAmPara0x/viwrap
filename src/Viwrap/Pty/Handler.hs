@@ -1,5 +1,6 @@
 module Viwrap.Pty.Handler
-  ( pselectIO
+  ( hWriteIO
+  , pselectIO
   , runHandleActIO
   , runTerminalIO
   ) where
@@ -18,7 +19,6 @@ import Data.Maybe                 (fromJust)
 
 import System.Console.ANSI        qualified as ANSI
 import System.IO                  (Handle, stderr, stdin, stdout)
-import System.Process             qualified as Process
 import System.Timeout             qualified as IO
 
 import Text.Printf                (printf)

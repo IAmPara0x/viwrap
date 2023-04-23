@@ -65,7 +65,7 @@ handleStdIn (Just content) = do
   -- TODO: currently assume that the content is just a single character, however this may not be always true
   -- therefore we would require some sort of batch processing.
 
-  keyAction defKeyMap _viMode $ BS.head content
+  when (content /= mempty) $ keyAction defKeyMap _viMode $ BS.head content
 
 pollMasterFd :: forall effs . ViwrapEff effs => Eff effs ()
 pollMasterFd = forever do
@@ -122,7 +122,7 @@ initialise = do
                  -- TODO: There should be two kinds of Env first one containing all the user config, Cmd, args
                  -- etc. The second Env would be created after we "setup" everything i.e. forked the process
                  -- install all the handlers, etc.
-                 , _logCtxs        = [PollCtx, OutputCtx]
+                 , _logCtxs        = [OutputCtx]
                  }
 
       setup = do

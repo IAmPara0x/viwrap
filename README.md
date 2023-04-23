@@ -30,6 +30,8 @@
 
 - [ ] Implement test suite
 
+- [ ] Generalize initialize function
+
 ### Bugs
 
 - [X] (B1) When we exit slave process there's hardware error due to master FD reading the input, figure out what's happening and fix it.
@@ -46,6 +48,7 @@
 ## working on
 
 - [ ] Document the code
+- [ ] Implement test suite
 - [ ] Implement Advance vim editting features
 - [ ] Improve ANSI escape sequence parser
 - [ ] Find a way to find Jittery cursor.

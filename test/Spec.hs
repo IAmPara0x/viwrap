@@ -1,2 +1,6 @@
+module Main (main) where
+
+import Test.Viwrap
+
 main :: IO ()
-main = putStrLn "Test suite not yet implemented"
+main = simulate

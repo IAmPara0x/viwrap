@@ -11,6 +11,8 @@ module Viwrap.Zipper
   , zipperFocus
   ) where
 
+import Control.Comonad
+
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Sequence   (Seq)
@@ -43,6 +45,9 @@ data Zipper a
   deriving stock (Eq, Show)
 
 makeLenses ''Zipper
+
+
+-- instance Comonad Zipper
 
 instance Semigroup a => Semigroup (Zipper a) where
   (Zipper f1 c1) <> (Zipper f2 c2) = Zipper (f1 <> f2) (c1 <> c2)
