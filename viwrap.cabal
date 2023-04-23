@@ -74,6 +74,7 @@ library
     , megaparsec
     , microlens
     , microlens-th
+    , optparse-applicative
     , process
     , text
     , unix
@@ -116,19 +117,24 @@ executable viwrap
     , megaparsec
     , microlens
     , microlens-th
+    , optparse-applicative
     , process
     , text
     , unix
     , viwrap
   default-language: GHC2021
 
-executable viwrap-capture
-  main-is: Main.hs
+executable viwrap-test
+  main-is: Spec.hs
   other-modules:
+      Capture.Viwrap
       Capture.Viwrap.Pty.Handler
+      CmdArgs
+      Simulate.Viwrap
+      Simulate.Viwrap.Pty.Handler
       Paths_viwrap
   hs-source-dirs:
-      viwrap-capture
+      test
   default-extensions:
       AllowAmbiguousTypes
       BlockArguments
@@ -154,54 +160,16 @@ executable viwrap-capture
     , containers
     , data-default
     , freer-simple
-    , megaparsec
-    , microlens
-    , microlens-th
-    , process
-    , text
-    , time
-    , unix
-    , viwrap
-  default-language: GHC2021
-
-executable viwrap-test
-  main-is: Spec.hs
-  other-modules:
-      Simulate.Pty.Handler
-      Test.Viwrap
-      Paths_viwrap
-  hs-source-dirs:
-      test
-  default-extensions:
-      AllowAmbiguousTypes
-      BlockArguments
-      DataKinds
-      DerivingStrategies
-      GADTs
-      ImportQualifiedPost
-      LambdaCase
-      MultiWayIf
-      OverloadedStrings
-      RecordWildCards
-      ScopedTypeVariables
-      TemplateHaskell
-      TypeFamilies
-  ghc-options: -fprint-explicit-foralls -fprint-explicit-kinds -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wunused-foralls -Wmissing-local-signatures -threaded -rtsopts -with-rtsopts=-N
-  build-depends:
-      ansi-terminal
-    , async
-    , base >=4.7 && <5
-    , bytestring
-    , comonad
-    , containers
-    , data-default
-    , freer-simple
     , knob
     , megaparsec
     , microlens
     , microlens-th
+    , optparse-applicative
     , process
+    , tasty
+    , tasty-golden
     , text
+    , time
     , unix
     , viwrap
   default-language: GHC2021

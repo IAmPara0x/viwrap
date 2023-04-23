@@ -1,4 +1,4 @@
-module Simulate.Pty.Handler
+module Simulate.Viwrap.Pty.Handler
   ( SimHandles (..)
   , feedStdIn
   , mkSimHandles
@@ -6,17 +6,22 @@ module Simulate.Pty.Handler
   ) where
 
 import Control.Concurrent
-import Control.Monad              (when)
 import Control.Monad.Freer        (Eff, LastMember, Members, interpret)
 import Control.Monad.Freer.Reader (Reader)
 
-import Data.ByteString            (ByteString)
 import Data.ByteString            qualified as BS
+
+import Data.Text.Encoding         (encodeUtf8)
 
 import System.IO                  qualified as IO
 import System.IO                  (Handle)
 import System.Process             qualified as Process
 
+
+import Capture.Viwrap.Pty.Handler (UserInput (..))
+import CmdArgs                    (SimulateArgs (..))
+import Data.Time                  (nominalDiffTimeToSeconds)
+import Text.Printf                (printf)
 import Viwrap.Logger
 import Viwrap.Pty
 import Viwrap.Pty.Handler         (hWriteIO, pselectIO)
@@ -29,13 +34,11 @@ data SimHandles
       , _simStdErr :: Handle
       }
 
-mkSimHandles :: IO SimHandles
-mkSimHandles = do
-  (readH, writeH ) <- Process.createPipe
-  (out  , hStdOut) <- IO.openTempFile "/tmp/" "stdout.viwrap"
-  hStdErr          <- snd <$> IO.openTempFile "/tmp/" "stderr.viwrap"
-
-  print out
+mkSimHandles :: SimulateArgs -> IO SimHandles
+mkSimHandles SimulateArgs {..} = do
+  (readH, writeH) <- Process.createPipe
+  hStdOut         <- IO.openFile (captureContentsFilePath <> ".test") IO.ReadWriteMode
+  hStdErr         <- snd <$> IO.openTempFile "/tmp/" "stderr.viwrap"
 
   IO.hSetBuffering readH IO.NoBuffering
   IO.hSetBuffering writeH IO.NoBuffering
@@ -57,15 +60,18 @@ runHandleActSimIO simH = interpret $ \case
   GetStderr               -> pure $ _simStdErr simH
 
 
-feedStdIn :: ByteString -> SimHandles -> IO ()
-feedStdIn inputBuffer simH = when
-  (inputBuffer /= mempty)
-  do
+feedStdIn :: [UserInput] -> SimHandles -> IO ()
+feedStdIn []                        _    = pure ()
+feedStdIn (UserInput {..} : inputs) simH = do
 
-    let simStdIn = snd $ _simStdIn simH
+  let simStdIn = snd $ _simStdIn simH
+      content  = encodeUtf8 _inputContents
+      delay    = ceiling @_ @Int (nominalDiffTimeToSeconds _inputAt * 1000000)
 
-    BS.hPutStr simStdIn (BS.take 1 inputBuffer)
+  putStrLn (printf "Feeding input %s with a delay of %s" (show content) (show delay))
 
-    threadDelay 100000
+  threadDelay delay
 
-    feedStdIn (BS.drop 1 inputBuffer) simH
+  BS.hPutStr simStdIn content
+
+  feedStdIn inputs simH

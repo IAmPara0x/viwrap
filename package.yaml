@@ -38,6 +38,7 @@ dependencies:
 - megaparsec
 - microlens
 - microlens-th
+- optparse-applicative
 - text
 - unix
 
@@ -97,18 +98,6 @@ executables:
     dependencies:
     - viwrap
 
-  viwrap-capture:
-    main:                Main.hs
-    source-dirs:         viwrap-capture
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - aeson
-    - time
-    - viwrap
-
   viwrap-test:
     main:                Spec.hs
     source-dirs:         test
@@ -119,3 +108,8 @@ executables:
     dependencies:
     - viwrap
     - knob
+    - aeson
+    - time
+    - viwrap
+    - tasty
+    - tasty-golden
