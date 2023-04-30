@@ -1,15 +1,8 @@
 Python 3.10.9 (main, Dec 19 2022, 17:35:49) [GCC 12.2.0] on linux
 Type "help", "copyright", "credits" or "license" for more information.
->>> [?25ll[?25h[?25la[?25h[?25ll[?25h[?25la[?25h
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-NameError: name 'lala' is not defined
->>> [?25h[?25ll[?25h[?25lw[?25h[?25ll[?25h[?25lw[?25h
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-NameError: name 'lwlw' is not defined
->>> [?25h[?25ll[?25h[?25la[?25h[?25ll[?25h[?25la[?25h
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-NameError: name 'lala' is not defined
->>> [?25h[?25le[?25h[?25lx[?25h[?25li[?25h[?25lt[?25h[?25l([?25h[?25l)[?25h
+>>> 10"[K[K[K"10"[K[K[K[Ka"10">>> exit9)
+  File "<stdin>", line 1
+    exit9)
+         ^
+SyntaxError: unmatched ')'
+>>> exit()

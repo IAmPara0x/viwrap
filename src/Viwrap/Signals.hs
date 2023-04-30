@@ -3,6 +3,7 @@ module Viwrap.Signals
   , posixSignalHook
   , sigCHLDHandler
   , sigWINCHHandler
+  , handleDeadChild
   ) where
 
 import Control.Concurrent         (MVar, putMVar, takeMVar)
@@ -65,17 +66,16 @@ sigCHLDHandler env cleanup = Catch do
 
   IO.exitImmediately ExitSuccess
 
- where
 
-  handleDeadChild
-    :: (Members '[Logger , Reader Env , HandleAct] effs, LastMember IO effs) => Eff effs ()
-  handleDeadChild = do
+handleDeadChild
+  :: (Members '[Logger , Reader Env , HandleAct] effs, LastMember IO effs) => Eff effs ()
+handleDeadChild = do
 
-    hmaster <- snd . _masterPty <$> ask
-    result  <- pselect [hmaster] Immediately
+  hmaster <- snd . _masterPty <$> ask
+  result  <- pselect [hmaster] Immediately
 
-    let [mMasterContent] = result
+  let [mMasterContent] = result
 
-    case mMasterContent of
-      Nothing      -> logOther ["childDied"] "Read all the output from slave process, exiting now."
-      Just content -> writeStdout content >> handleDeadChild
+  case mMasterContent of
+    Nothing      -> logOther ["childDied"] "Read all the output from slave process, exiting now."
+    Just content -> writeStdout content >> handleDeadChild

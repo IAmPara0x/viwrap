@@ -4,6 +4,8 @@ module Viwrap
   , initialise
   , launch
   , pollMasterFd
+  , handleMaster
+  , handleStdIn
   ) where
 
 import Control.Concurrent         (MVar, newMVar)
@@ -66,6 +68,8 @@ handleStdIn (Just content) = do
   -- therefore we would require some sort of batch processing.
 
   when (content /= mempty) $ keyAction defKeyMap _viMode $ BS.head content
+  when (BS.tail content /= mempty) $ handleStdIn (Just $ BS.tail content)
+
 
 pollMasterFd :: forall effs . ViwrapEff effs => Eff effs ()
 pollMasterFd = forever do

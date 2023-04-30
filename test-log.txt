@@ -1,0 +1,519 @@
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"Python 3.10.9 (main, Dec 19 2022, 17:35:49) [GCC 12.2.0] on linux\r\nType \"help\", \"copyright\", \"credits\" or \"license\" for more information.\r\n")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "Python 3.10.9 (main, Dec 19 2022, 17:35:49) [GCC 12.2.0] on linux\r\nType \"help\", \"copyright\", \"credits\" or \"license\" for more information.\r\n",Nothing]
+[Output][FdWrite] writing "Python 3.10.9 (main, Dec 19 2022, 17:35:49) [GCC 12.2.0] on linux\r\nType \"help\", \"copyright\", \"credits\" or \"license\" for more information.\r\n" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},">>> ")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just ">>> ",Nothing]
+[Output][FdWrite] writing ">>> " to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"1")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "1"]
+[VI][insertBS] inserting "1" when zipper state is Zipper {_zipperFocus = "", _zipperCrumbs = ""}
+[Output][FdWrite] writing "1" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList []
+[VI][insertBS] Zipper {_zipperFocus = "", _zipperCrumbs = "1"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"1")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "1",Nothing]
+[Output][FdWrite] writing "1" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: "1"
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"0")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "0"]
+[VI][insertBS] inserting "0" when zipper state is Zipper {_zipperFocus = "", _zipperCrumbs = "1"}
+[Output][FdWrite] writing "0" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList []
+[VI][insertBS] Zipper {_zipperFocus = "", _zipperCrumbs = "01"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"0")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "0",Nothing]
+[Output][FdWrite] writing "0" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: "0"
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"\"")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "\""]
+[VI][insertBS] inserting "\"" when zipper state is Zipper {_zipperFocus = "", _zipperCrumbs = "01"}
+[Output][FdWrite] writing "\"" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList []
+[VI][insertBS] Zipper {_zipperFocus = "", _zipperCrumbs = "\"01"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"\"")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "\"",Nothing]
+[Output][FdWrite] writing "\"" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: "\""
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"\ESC")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "\ESC"]
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] "\ESC[50;1R"
+[VI][moveCursor] cursor pos: (49,0), termsize: (64,238)
+[Output][FdWrite] writing "\ESC[49;238H" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][moveLeft] Zipper {_zipperFocus = "\"", _zipperCrumbs = "01"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"I")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "I"]
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] "\ESC[51;1R"
+[VI][moveCursor] cursor pos: (50,0), termsize: (64,238)
+[Output][FdWrite] writing "\ESC[50;237H" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][moveLeft] Zipper {_zipperFocus = "10\"", _zipperCrumbs = ""}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"\"")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "\""]
+[VI][insertBS] inserting "\"" when zipper state is Zipper {_zipperFocus = "10\"", _zipperCrumbs = ""}
+[Output][FdWrite] writing "\DEL\DEL\DEL\"10\"" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] "\ESC[52;1R"
+[VI][moveCursor] cursor pos: (51,0), termsize: (64,238)
+[Output][FdWrite] writing "\ESC[52;4H" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList []
+[VI][insertBS] Zipper {_zipperFocus = "10\"", _zipperCrumbs = "\""}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"\b\ESC[K\b\ESC[K\b\ESC[K\"10\"")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "\b\ESC[K\b\ESC[K\b\ESC[K\"10\"",Nothing]
+[Output][FdWrite] writing "\b\ESC[K\b\ESC[K\b\ESC[K\"10\"" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: "\b\ESC[K\b\ESC[K\b\ESC[K\"10\""
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] ""
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] ""
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] ""
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] ""
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] ""
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] "\ESC[53;1R"
+[VI][moveCursor] cursor pos: (52,0), termsize: (64,238)
+[Output][FdWrite] writing "\ESC[52;236H" to {handle: /tmp/stdout242093-0.viwrap}
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"\ESC")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "\ESC"]
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] "\ESC[54;1R"
+[VI][moveCursor] cursor pos: (53,0), termsize: (64,238)
+[Output][FdWrite] writing "\ESC[53;238H" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][moveLeft] Zipper {_zipperFocus = "\"10\"", _zipperCrumbs = ""}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"k")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "k"]
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"I")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "I"]
+[VI][moveLeft] Zipper {_zipperFocus = "\"10\"", _zipperCrumbs = ""}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"a")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "a"]
+[VI][insertBS] inserting "a" when zipper state is Zipper {_zipperFocus = "\"10\"", _zipperCrumbs = ""}
+[Output][FdWrite] writing "\DEL\DEL\DEL\DELa\"10\"" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] "\ESC[57;1R"
+[VI][moveCursor] cursor pos: (56,0), termsize: (64,238)
+[Output][FdWrite] writing "\ESC[57;5H" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList []
+[VI][insertBS] Zipper {_zipperFocus = "\"10\"", _zipperCrumbs = "a"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"\b\ESC[K\b\ESC[K\b\ESC[K\b\ESC[Ka\"10\""),({handle: <file descriptor: 22>}," ")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "\b\ESC[K\b\ESC[K\b\ESC[K\b\ESC[Ka\"10\"",Just " "]
+[Output][FdWrite] writing "\b\ESC[K\b\ESC[K\b\ESC[K\b\ESC[Ka\"10\"" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: "\b\ESC[K\b\ESC[K\b\ESC[K\b\ESC[Ka\"10\""
+[VI][insertBS] inserting " " when zipper state is Zipper {_zipperFocus = "\"10\"", _zipperCrumbs = "a"}
+[Output][FdWrite] writing "\DEL\DEL\DEL\DEL \"10\"" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] "\ESC[58;1R"
+[VI][moveCursor] cursor pos: (57,0), termsize: (64,238)
+[Output][FdWrite] writing "\ESC[58;5H" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList [SyncCursor]
+[VI][insertBS] Zipper {_zipperFocus = "\"10\"", _zipperCrumbs = " a"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"=")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "="]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] "\ESC[59;1R"
+[VI][moveCursor] cursor pos: (58,0), termsize: (64,238)
+[Output][FdWrite] writing "\ESC[58;235H" to {handle: /tmp/stdout242093-0.viwrap}
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][insertBS] inserting "=" when zipper state is Zipper {_zipperFocus = "\"10\"", _zipperCrumbs = " a"}
+[Output][FdWrite] writing "\DEL\DEL\DEL\DEL=\"10\"" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] "\ESC[60;1R"
+[VI][moveCursor] cursor pos: (59,0), termsize: (64,238)
+[Output][FdWrite] writing "\ESC[60;5H" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList [SyncCursor]
+[VI][insertBS] Zipper {_zipperFocus = "\"10\"", _zipperCrumbs = "= a"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>}," \n")]
+[Poll][pselectSimIO][Input Buffer] "\n"
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just " "]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] ""
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] ""
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] "\ESC[61;1R"
+[VI][moveCursor] cursor pos: (60,0), termsize: (64,238)
+[Output][FdWrite] writing "\ESC[60;235H" to {handle: /tmp/stdout242093-0.viwrap}
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][insertBS] inserting " " when zipper state is Zipper {_zipperFocus = "\"10\"", _zipperCrumbs = "= a"}
+[Output][FdWrite] writing "\DEL\DEL\DEL\DEL \"10\"" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] "\ESC[62;1R"
+[VI][moveCursor] cursor pos: (61,0), termsize: (64,238)
+[Output][FdWrite] writing "\ESC[62;5H" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList [SyncCursor]
+[VI][insertBS] Zipper {_zipperFocus = "\"10\"", _zipperCrumbs = " = a"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"ex")]
+[Poll][pselectSimIO][Input Buffer] "ex"
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "\n"]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][hGetCursorPosition][inputBuffer] Input Buffer content: 
+[Output][hGetCursorPosition] "\ESC[63;1R"
+[VI][moveCursor] cursor pos: (62,0), termsize: (64,238)
+[Output][FdWrite] writing "\ESC[62;235H" to {handle: /tmp/stdout242093-0.viwrap}
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Output][FdWrite] writing "\n" to {handle: <file descriptor: 27>}
+[VI][handleNewline] Received '\n' setting the VI line to initial state
+[VI][addHook] Adding SyncCursor to fromList [SyncCursor]
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 20000
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"i")]
+[Poll][pselectSimIO][Input Buffer] "xi"
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "e"]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][insertBS] inserting "e" when zipper state is Zipper {_zipperFocus = "", _zipperCrumbs = ""}
+[Output][FdWrite] writing "e" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList [SyncCursor]
+[VI][insertBS] Zipper {_zipperFocus = "", _zipperCrumbs = "e"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},">>> e")]
+[Poll][pselectSimIO][Input Buffer] "i"
+[Poll][pselectSimIO][New Poll Result] [Just ">>> e",Just "x"]
+[Output][FdWrite] writing ">>> e" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: ">>> e"
+[VI][insertBS] inserting "x" when zipper state is Zipper {_zipperFocus = "", _zipperCrumbs = "e"}
+[Output][FdWrite] writing "x" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList [SyncCursor,SyncCursor]
+[VI][insertBS] Zipper {_zipperFocus = "", _zipperCrumbs = "xe"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"x")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "x",Just "i"]
+[Output][FdWrite] writing "x" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: "x"
+[VI][insertBS] inserting "i" when zipper state is Zipper {_zipperFocus = "", _zipperCrumbs = "xe"}
+[Output][FdWrite] writing "i" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList [SyncCursor,SyncCursor,SyncCursor]
+[VI][insertBS] Zipper {_zipperFocus = "", _zipperCrumbs = "ixe"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"i")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "i",Nothing]
+[Output][FdWrite] writing "i" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: "i"
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"t")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "t"]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][insertBS] inserting "t" when zipper state is Zipper {_zipperFocus = "", _zipperCrumbs = "ixe"}
+[Output][FdWrite] writing "t" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList [SyncCursor,SyncCursor]
+[VI][insertBS] Zipper {_zipperFocus = "", _zipperCrumbs = "tixe"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"t")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "t",Nothing]
+[Output][FdWrite] writing "t" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: "t"
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"9")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "9"]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][insertBS] inserting "9" when zipper state is Zipper {_zipperFocus = "", _zipperCrumbs = "tixe"}
+[Output][FdWrite] writing "9" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList [SyncCursor]
+[VI][insertBS] Zipper {_zipperFocus = "", _zipperCrumbs = "9tixe"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"9")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "9",Nothing]
+[Output][FdWrite] writing "9" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: "9"
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},")")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just ")"]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][insertBS] inserting ")" when zipper state is Zipper {_zipperFocus = "", _zipperCrumbs = "9tixe"}
+[Output][FdWrite] writing ")" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList []
+[VI][insertBS] Zipper {_zipperFocus = "", _zipperCrumbs = ")9tixe"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},")")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just ")",Nothing]
+[Output][FdWrite] writing ")" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: ")"
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"\n")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "\n"]
+[Output][FdWrite] writing "\n" to {handle: <file descriptor: 27>}
+[VI][handleNewline] Received '\n' setting the VI line to initial state
+[VI][addHook] Adding SyncCursor to fromList []
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 20000
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"\r\n  File \"<stdin>\", line 1\r\n    exit9)\r\n         ^\r\nSyntaxError: unmatched ')'\r\n>>> ")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "\r\n  File \"<stdin>\", line 1\r\n    exit9)\r\n         ^\r\nSyntaxError: unmatched ')'\r\n>>> ",Nothing]
+[Output][FdWrite] writing "\r\n  File \"<stdin>\", line 1\r\n    exit9)\r\n         ^\r\nSyntaxError: unmatched ')'\r\n>>> " to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: "\r\n  File \"<stdin>\", line 1\r\n    exit9)\r\n         ^\r\nSyntaxError: unmatched ')'\r\n>>> "
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 20000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"e")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "e"]
+[VI][insertBS] inserting "e" when zipper state is Zipper {_zipperFocus = "", _zipperCrumbs = ""}
+[Output][FdWrite] writing "e" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList []
+[VI][insertBS] Zipper {_zipperFocus = "", _zipperCrumbs = "e"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"e")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "e",Nothing]
+[Output][FdWrite] writing "e" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: "e"
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"x")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "x"]
+[VI][insertBS] inserting "x" when zipper state is Zipper {_zipperFocus = "", _zipperCrumbs = "e"}
+[Output][FdWrite] writing "x" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList []
+[VI][insertBS] Zipper {_zipperFocus = "", _zipperCrumbs = "xe"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"x")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "x",Nothing]
+[Output][FdWrite] writing "x" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: "x"
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"i")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "i"]
+[VI][insertBS] inserting "i" when zipper state is Zipper {_zipperFocus = "", _zipperCrumbs = "xe"}
+[Output][FdWrite] writing "i" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList []
+[VI][insertBS] Zipper {_zipperFocus = "", _zipperCrumbs = "ixe"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"i")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "i",Nothing]
+[Output][FdWrite] writing "i" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: "i"
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"t")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "t"]
+[VI][insertBS] inserting "t" when zipper state is Zipper {_zipperFocus = "", _zipperCrumbs = "ixe"}
+[Output][FdWrite] writing "t" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList []
+[VI][insertBS] Zipper {_zipperFocus = "", _zipperCrumbs = "tixe"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"t")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "t",Nothing]
+[Output][FdWrite] writing "t" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: "t"
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"(")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "("]
+[VI][insertBS] inserting "(" when zipper state is Zipper {_zipperFocus = "", _zipperCrumbs = "tixe"}
+[Output][FdWrite] writing "(" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList []
+[VI][insertBS] Zipper {_zipperFocus = "", _zipperCrumbs = "(tixe"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"(")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "(",Nothing]
+[Output][FdWrite] writing "(" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: "("
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},")")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just ")"]
+[VI][insertBS] inserting ")" when zipper state is Zipper {_zipperFocus = "", _zipperCrumbs = "(tixe"}
+[Output][FdWrite] writing ")" to {handle: <file descriptor: 27>}
+[Output][FdWrite] writing "\ESC[?25l" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][addHook] Adding SyncCursor to fromList []
+[VI][insertBS] Zipper {_zipperFocus = "", _zipperCrumbs = ")(tixe"}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},")")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just ")",Nothing]
+[Output][FdWrite] writing ")" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: ")"
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 10000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Infinite
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 22>},"\n")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Just "\n"]
+[Output][FdWrite] writing "\n" to {handle: <file descriptor: 27>}
+[VI][handleNewline] Received '\n' setting the VI line to initial state
+[VI][addHook] Adding SyncCursor to fromList []
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 20000
+[Poll][PSelect] Poll result: [({handle: <file descriptor: 27>},"\r\n")]
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Just "\r\n",Nothing]
+[Output][FdWrite] writing "\r\n" to {handle: /tmp/stdout242093-0.viwrap}
+[VI][SyncCursor] PrevMasterContent: "\r\n"
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>},{handle: <file descriptor: 22>}], Timeout: Wait 20000
+[Poll][PSelect] Poll result: []
+[Poll][pselectSimIO][Input Buffer] ""
+[Poll][pselectSimIO][New Poll Result] [Nothing,Nothing]
+[VI][SyncCursor] PrevMasterContent: ""
+[Output][FdWrite] writing "\ESC[?25h" to {handle: /tmp/stdout242093-0.viwrap}
+[Poll][PSelect] FDs: [{handle: <file descriptor: 27>}], Timeout: Immediately
+[Poll][PSelect] Poll result: []

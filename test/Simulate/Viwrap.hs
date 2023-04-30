@@ -4,38 +4,73 @@ module Simulate.Viwrap
 
 import CmdArgs                     (SimulateArgs (..))
 import Control.Concurrent
-import Control.Monad               (void)
-import Control.Monad.Freer         (runM, sendM)
-import Control.Monad.Freer.Reader  (runReader)
-import Control.Monad.Freer.State   (evalState)
+import Control.Monad               (void, zipWithM_)
+import Control.Monad.Freer         (Eff, LastMember, runM, sendM)
+import Control.Monad.Freer.Reader  (ask, runReader)
+import Control.Monad.Freer.State   (evalState, get, modify, execState)
 
 import Data.Aeson                  qualified as Aeson
 import Data.Default                (Default (def))
+import Data.ByteString (ByteString)
+import Data.Text (Text)
+import Data.Text.IO               qualified as Text
 
-import Lens.Micro                  ((&))
+import Lens.Micro                  ((&), (.~))
 
 import Simulate.Viwrap.Pty.Handler
 
 import System.Console.ANSI         qualified as ANSI
 import System.IO                   qualified as IO
 import System.Posix                qualified as IO
-import System.Posix.Signals        qualified as Signals
 import System.Posix.Terminal       qualified as Terminal
+import System.Process              (ProcessHandle, getProcessExitCode)
 
 import Text.Printf                 (printf)
 
 import Capture.Viwrap.Pty.Handler  (CaptureContents (..))
-import Viwrap                      (Initialized (..), pollMasterFd)
+import Viwrap                      (Initialized (..), handleStdIn, handleMaster)
 import Viwrap.Logger
 import Viwrap.Logger.Handler       (runLoggerIO)
-import Viwrap.Pty                  hiding (Terminal (..), getTermSize)
+import Viwrap.Pty                  hiding (getTermSize)
 import Viwrap.Pty.Handler          (runTerminalIO)
 import Viwrap.Pty.TermSize         (getTermSize, setTermSize)
 import Viwrap.Pty.Utils
-import Viwrap.Signals              (sigCHLDHandler)
+import Viwrap.Signals              (posixSignalHook, handleDeadChild)
 
 import Test.Tasty
 import Test.Tasty.Golden
+
+pollMasterFd :: forall effs . (ViwrapEff effs, LastMember IO effs) => ProcessHandle -> Eff effs ()
+pollMasterFd ph = do
+
+  stdin   <- getStdin
+  hMaster <- snd . _masterPty <$> ask
+
+  let poll :: Eff effs ()
+      poll = do
+
+        mExitCode <- sendM $ getProcessExitCode ph
+
+        case mExitCode of
+          (Just exitCode) -> do
+            logOther ["childDied"] $ printf "slave process exited with code: %s" (show exitCode)
+            handleDeadChild
+            modify (childStatus .~ Dead)
+
+          Nothing -> do
+
+            ViwrapState { _isPromptUp, _currentPollRate, _recievedCtrlD } <- get
+
+            results <- if
+              | _recievedCtrlD -> pselect [hMaster] Immediately
+              | _isPromptUp    -> pselect [hMaster, stdin] Infinite
+              | otherwise      -> pselect [hMaster, stdin] $ Wait _currentPollRate
+
+            posixSignalHook
+            zipWithM_ ($) [handleMaster, handleStdIn] results
+
+            poll
+  poll
 
 
 initialise :: SimulateArgs -> IO Initialized
@@ -57,10 +92,10 @@ initialise SimulateArgs {..} = do
                  , _envCmdArgs     = simulateProgramArgs
                  , _envPollingRate = 20000
                  , _envBufferSize  = 2048
-                 , _logFile        = "log.txt"
+                 , _logFile        = "test-log.txt"
                  , _masterPty      = (fdMaster, hMaster)
                  , _slavePty       = (fdSlave, hSlave)
-                 , _logCtxs        = [PollCtx, OutputCtx]
+                 , _logCtxs        = [PollCtx, OutputCtx, VICtx]
                  }
 
       setup = do
@@ -105,22 +140,23 @@ main args@SimulateArgs {..} = defaultMain do
 launch :: SimulateArgs -> IO ()
 launch args@SimulateArgs {..} = do
 
-  simHandles       <- mkSimHandles args
+  simHandles       <- mkSimHandles
 
   (Just res)       <- Aeson.decodeFileStrict @CaptureContents (captureContentsFilePath <> ".json")
 
   Initialized {..} <- initialise args
 
-  void $ Signals.installHandler Signals.sigCHLD
-                                (sigCHLDHandler initialEnv (cleanup initialEnv simHandles))
-                                (Just Signals.fullSignalSet)
+  void $ forkIO $ feedStdIn (_stdinContents res) inputOffset simHandles
 
-  void $ forkIO $ feedStdIn (_stdinContents res) simHandles
-
-  runHandleActSimIO simHandles pollMasterFd
+  simContent <- runHandleActSimIO simHandles (pollMasterFd slaveProcessHandle)
     & evalState (def :: ViwrapState)
     & runTerminalIO
     & evalState termStateMVar
     & runLoggerIO
     & runReader initialEnv
+    & execState ((mempty,mempty) :: (ByteString,[Text]))
     & runM
+
+  Text.writeFile (captureContentsFilePath <> ".test") (mconcat $ snd simContent)
+
+  cleanup initialEnv simHandles

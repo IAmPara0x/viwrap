@@ -11,8 +11,6 @@ module Viwrap.Zipper
   , zipperFocus
   ) where
 
-import Control.Comonad
-
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Sequence   (Seq)
