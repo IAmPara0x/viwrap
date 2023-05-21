@@ -21,7 +21,7 @@ runLoggerIO
 runLoggerIO = interpret $ \case
   LogM ctx args str -> do
 
-    Env { _logFile, _logCtxs } <- ask
+    LoggerConfig { _logFile, _logCtxs } <- _loggerConfig <$> ask
 
     when (ctx `elem` _logCtxs) $ sendM $ appendFile _logFile $ logStr args str
 

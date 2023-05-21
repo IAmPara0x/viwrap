@@ -2,11 +2,15 @@
 module Viwrap.Pty
   ( Child (..)
   , Env (..)
+  , File (..)
   , HandleAct (..)
   , TermState (..)
   , Terminal (..)
   , Timeout (..)
-  , ViwrapEff
+  , ViStack
+  , ViwrapHandle (..)
+  , ViwrapHandles (..)
+  , ViwrapStack
   , ViwrapState (..)
   , childStatus
   , currentPollRate
@@ -14,17 +18,19 @@ module Viwrap.Pty
   , envCmd
   , envCmdArgs
   , envPollingRate
+  , fromViwrapHandle
   , getSignalReceived
-  , getStderr
-  , getStdin
-  , getStdout
   , getTermCursorPos
   , getTermSize
+  , hStdErr
+  , hStdIn
+  , hStdOut
   , hWrite
   , isPromptUp
-  , logCtxs
-  , logFile
+  , loggerConfig
   , masterPty
+  , modifyViwrapHandle
+  , onViwrapHandle
   , prevMasterContent
   , pselect
   , recievedCtrlD
@@ -34,15 +40,17 @@ module Viwrap.Pty
   , termSize
   , viHooks
   , viState
+  , viwrapHandles
   ) where
 
-import Control.Monad.Freer        (Members)
 import Control.Monad.Freer.Reader (Reader)
 import Control.Monad.Freer.State  (State)
 import Control.Monad.Freer.TH     (makeEffect)
 
 import Data.ByteString            (ByteString)
 import Data.Default               (Default (def))
+import Data.Functor.Identity      (Identity (..))
+import Data.Kind                  (Type)
 import Data.Sequence              (Seq)
 
 import Lens.Micro.TH              (makeLenses)
@@ -51,7 +59,7 @@ import System.IO                  (Handle)
 import System.Posix               (Fd)
 import System.Posix.Signals       (Signal)
 
-import Viwrap.Logger              (LogContext, Logger)
+import Viwrap.Logger              (Logger, LoggerConfig)
 import Viwrap.VI
 
 
@@ -61,14 +69,59 @@ data Timeout
   | Infinite
   deriving stock (Show)
 
+data File
+  = FileHandle
+  | FileContent
+  deriving stock (Show)
+
+type family ToFile (file :: File) :: Type where
+  ToFile 'FileHandle = Handle
+  ToFile 'FileContent = Maybe ByteString
+
+data ViwrapHandle (f :: File)
+  = StdIn (ToFile f)
+  | StdOut (ToFile f)
+  | StdErr (ToFile f)
+  | MasterPty (ToFile f)
+  | SlavePty (ToFile f)
+
+deriving stock instance Show (ToFile f) => Show (ViwrapHandle f)
+
+
+fromViwrapHandle :: forall f . ViwrapHandle f -> ToFile f
+fromViwrapHandle = runIdentity . onViwrapHandle Identity
+
+onViwrapHandle :: forall f f1 t1 . (ToFile f -> t1 f1) -> ViwrapHandle f -> t1 f1
+onViwrapHandle f (StdIn     h) = f h
+onViwrapHandle f (StdOut    h) = f h
+onViwrapHandle f (StdErr    h) = f h
+onViwrapHandle f (SlavePty  h) = f h
+onViwrapHandle f (MasterPty h) = f h
+
+modifyViwrapHandle :: forall f f1 . (ToFile f -> ToFile f1) -> ViwrapHandle f -> ViwrapHandle f1
+modifyViwrapHandle f (StdIn     h) = StdIn $ f h
+modifyViwrapHandle f (StdOut    h) = StdOut $ f h
+modifyViwrapHandle f (StdErr    h) = StdErr $ f h
+modifyViwrapHandle f (SlavePty  h) = SlavePty $ f h
+modifyViwrapHandle f (MasterPty h) = MasterPty $ f h
+
 data HandleAct a where
-  GetStderr :: HandleAct Handle
-  GetStdin :: HandleAct Handle
-  GetStdout :: HandleAct Handle
-  HWrite :: Handle -> ByteString -> HandleAct ()
-  Pselect :: [Handle] -> Timeout -> HandleAct [Maybe ByteString]
+  HWrite :: ViwrapHandle 'FileHandle -> ByteString -> HandleAct ()
+  Pselect :: [ViwrapHandle 'FileHandle] -> Timeout -> HandleAct [ViwrapHandle 'FileContent]
 
 makeEffect ''HandleAct
+
+data ViwrapHandles
+  = ViwrapHandles
+      { _masterPty :: (Fd, ViwrapHandle 'FileHandle)
+      , _slavePty  :: (Fd, ViwrapHandle 'FileHandle)
+      , _hStdIn    :: ViwrapHandle 'FileHandle
+      , _hStdOut   :: ViwrapHandle 'FileHandle
+      , _hStdErr   :: ViwrapHandle 'FileHandle
+      }
+  deriving stock (Show)
+
+makeLenses ''ViwrapHandles
 
 data Env
   = Env
@@ -76,10 +129,8 @@ data Env
       , _envCmdArgs     :: [String]
       , _envPollingRate :: Int
       , _envBufferSize  :: Int
-      , _logFile        :: FilePath
-      , _masterPty      :: (Fd, Handle)
-      , _slavePty       :: (Fd, Handle)
-      , _logCtxs        :: [LogContext]
+      , _loggerConfig   :: LoggerConfig
+      , _viwrapHandles  :: ViwrapHandles
       }
   deriving stock (Show)
 
@@ -131,5 +182,6 @@ data TermState
 
 makeLenses ''TermState
 
-type ViwrapEff effs
-  = Members '[HandleAct , Logger , Reader Env , State ViwrapState , Terminal] effs
+type ViwrapStack = '[HandleAct , Terminal , State ViwrapState , Logger , Reader Env , IO]
+
+type ViStack = '[State ViwrapState , Logger , Reader Env , IO]

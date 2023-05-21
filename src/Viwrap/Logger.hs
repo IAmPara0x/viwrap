@@ -1,6 +1,10 @@
 module Viwrap.Logger
   ( LogContext (..)
   , Logger (..)
+  , LoggerConfig (..)
+  , logCtxs
+  , logError
+  , logFile
   , logInput
   , logOther
   , logOutput
@@ -12,6 +16,7 @@ module Viwrap.Logger
 import Control.Monad.Freer    (Eff, Member)
 import Control.Monad.Freer.TH (makeEffect)
 
+import Lens.Micro.TH          (makeLenses)
 
 data LogContext
   = PollCtx
@@ -20,12 +25,22 @@ data LogContext
   | VICtx
   | PtyCtx
   | OtherCtx
+  | ErrorCtx
   deriving stock (Bounded, Enum, Eq, Ord, Show)
 
 data Logger a where
   LogM :: LogContext -> [String] -> String -> Logger ()
 
 makeEffect ''Logger
+
+data LoggerConfig
+  = LoggerConfig
+      { _logFile :: FilePath
+      , _logCtxs :: [LogContext]
+      }
+  deriving stock (Show)
+
+makeLenses ''LoggerConfig
 
 logPty :: Member Logger effs => [String] -> String -> Eff effs ()
 logPty = logM PtyCtx . ("PTY" :)
@@ -44,3 +59,6 @@ logVI = logM VICtx . ("VI" :)
 
 logOther :: Member Logger effs => [String] -> String -> Eff effs ()
 logOther = logM OtherCtx . ("Other" :)
+
+logError :: Member Logger effs => [String] -> String -> Eff effs ()
+logError = logM ErrorCtx . ("Error" :)

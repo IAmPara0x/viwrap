@@ -1,0 +1,13 @@
+cradle:
+  cabal:
+    - path: "src"
+      component: "lib:viwrap"
+
+    - path: "app/Main.hs"
+      component: "viwrap:exe:viwrap"
+
+    - path: "app/Paths_viwrap.hs"
+      component: "viwrap:exe:viwrap"
+
+    - path: "test"
+      component: "viwrap:test:viwrap-test"

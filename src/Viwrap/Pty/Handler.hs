@@ -17,8 +17,7 @@ import Data.ByteString            qualified as BS
 import Data.Maybe                 (fromJust)
 
 import System.Console.ANSI        qualified as ANSI
-import System.IO                  (Handle, stderr, stdin, stdout)
-import System.Process             qualified as Process
+import System.IO                  (Handle, stdout)
 import System.Timeout             qualified as IO
 
 import Text.Printf                (printf)
@@ -36,15 +35,12 @@ runHandleActIO
 runHandleActIO = interpret $ \case
   Pselect handles timeout -> pselectIO handles timeout
   HWrite  handle  content -> hWriteIO handle content
-  GetStdin                -> pure stdin
-  GetStdout               -> pure stdout
-  GetStderr               -> pure stderr
 
 pselectIO
   :: (Members '[Logger , Reader Env] effs, LastMember IO effs)
-  => [Handle]
+  => [ViwrapHandle 'FileHandle]
   -> Timeout
-  -> Eff effs [Maybe ByteString]
+  -> Eff effs [ViwrapHandle 'FileContent]
 pselectIO handles timeout = do
 
   Env { _envBufferSize } <- ask
@@ -67,24 +63,27 @@ pselectIO handles timeout = do
 
   logSelect $ printf "FDs: %s, Timeout: %s" (show handles) (show timeout)
   results <- sendM do
-    readers <- mapM asyncReader handles
+    readers <- mapM (asyncReader . fromViwrapHandle) handles
     void $ waitAny readers
     results <- mapM (tryReadContent <=< poll) readers
     mapM_ cancel readers
     pure results
 
 
-  let fdAndContents :: [(Handle, ByteString)]
+  let fdAndContents :: [(ViwrapHandle 'FileHandle, ByteString)]
       fdAndContents = foldMap (\(h, r) -> maybe mempty (\c -> [(h, c)]) r) $ zip handles results
 
   logSelect $ printf "Poll result: %s" (show fdAndContents)
-  pure results
+  pure $ zipWith (modifyViwrapHandle . const) results handles
 
-hWriteIO :: (Members '[Logger] effs, LastMember IO effs) => Handle -> ByteString -> Eff effs ()
+hWriteIO
+  :: (Members '[Logger] effs, LastMember IO effs)
+  => ViwrapHandle 'FileHandle
+  -> ByteString
+  -> Eff effs ()
 hWriteIO handle content = do
   logOutput ["FdWrite"] $ printf "writing %s to %s" (show content) (show handle)
-  sendM (BS.hPutStr handle content)
-
+  sendM (BS.hPutStr (fromViwrapHandle handle) content)
 
 runTerminalIO
   :: (Members '[Logger] effs, LastMember IO effs)
@@ -96,7 +95,6 @@ runTerminalIO = reinterpret $ \case
     case mTermSize of
       (Just size) -> pure size
       Nothing     -> fromJust <$> sendM (ANSI.hGetTerminalSize stdout)
-
   TermCursorPos -> do
     fromJust <$> hGetCursorPosition stdout
 

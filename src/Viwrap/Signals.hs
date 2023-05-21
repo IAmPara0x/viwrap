@@ -6,9 +6,11 @@ module Viwrap.Signals
   ) where
 
 import Control.Concurrent         (MVar, putMVar, takeMVar)
-import Control.Monad.Freer        (Eff, LastMember, Members, runM)
-import Control.Monad.Freer.Reader (Reader, ask, runReader)
+import Control.Monad.Freer        (Eff, Members, runM)
+import Control.Monad.Freer.Reader (Reader, runReader)
 import Control.Monad.Freer.State  (modify)
+
+import Data.ByteString            (ByteString)
 
 import Lens.Micro                 ((&), (.~))
 
@@ -20,11 +22,11 @@ import System.Posix.Signals       (Handler (Catch), Signal)
 import System.Process             (Pid)
 
 import Viwrap.Logger
-import Viwrap.Logger.Handler      (runLoggerIO, runLoggerUnit)
+import Viwrap.Logger.Handler      (runLoggerUnit)
 import Viwrap.Pty                 hiding (Terminal (..), getTermSize)
 import Viwrap.Pty.Handler         (runHandleActIO)
 import Viwrap.Pty.TermSize        (TermSize (..), getTermSize, setTermSize)
-import Viwrap.Pty.Utils           (writeStdout)
+import Viwrap.Pty.Utils           (getMasterPty, writeStdout)
 import Viwrap.VI
 
 
@@ -42,7 +44,7 @@ sigWINCHHandler termStateMVar fdMaster = Catch do
   TermSize {..} <- getTermSize IO.stdInput
   putMVar termStateMVar (termState { _getTermSize = Just (termHeight, termWidth) })
 
-posixSignalHook :: ViwrapEff effs => Eff effs ()
+posixSignalHook :: Eff ViwrapStack ()
 posixSignalHook = do
   msignal <- signalReceived
 
@@ -52,7 +54,7 @@ posixSignalHook = do
                   | otherwise                -> pure ()
 
 
-handleSigInt :: ViwrapEff effs => Eff effs ()
+handleSigInt :: Eff ViwrapStack ()
 handleSigInt = do
   modify (viState . currentLine .~ mempty)
 
@@ -67,15 +69,15 @@ sigCHLDHandler env cleanup = Catch do
 
  where
 
-  handleDeadChild
-    :: (Members '[Logger , Reader Env , HandleAct] effs, LastMember IO effs) => Eff effs ()
+  handleDeadChild :: forall effs . Members '[HandleAct , Logger , Reader Env] effs => Eff effs ()
   handleDeadChild = do
 
-    hmaster <- snd . _masterPty <$> ask
+    hmaster <- getMasterPty
     result  <- pselect [hmaster] Immediately
 
-    let [mMasterContent] = result
+    let handleFileContent :: Maybe ByteString -> Eff effs ()
+        handleFileContent Nothing =
+          logOther ["childDied"] "Read all the output from slave process, exiting now."
+        handleFileContent (Just content) = writeStdout content >> handleDeadChild
 
-    case mMasterContent of
-      Nothing      -> logOther ["childDied"] "Read all the output from slave process, exiting now."
-      Just content -> writeStdout content >> handleDeadChild
+    mapM_ (onViwrapHandle handleFileContent) result

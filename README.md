@@ -19,7 +19,7 @@
 - [ ] Figure out a better way to handle colored prompt
 
 - [ ] Install signal handlers
-  - [ ] install and integrate SIGINT
+  - [X] install and integrate SIGINT
 
 - [ ] improve the algorithm to find where to insert the text such that it requires less calls to
       termsize and cursor position
@@ -41,7 +41,7 @@
 - [?] Movement through line history is very buggy
 - [ ] Spago repl doesn't work
 - [ ] Can't get cursor position reliably
-- [ ] ghci doesn't wrap lined when using viwrap
+- [ ] ghci doesn't wrap lines when using viwrap
 
 ## working on
 
@@ -50,7 +50,6 @@
 - [ ] Improve ANSI escape sequence parser
 - [ ] Find a way to find Jittery cursor.
 - [ ] Install signal handlers
-  - [ ] install and integrate SIGINT
 
 ## Questions
 

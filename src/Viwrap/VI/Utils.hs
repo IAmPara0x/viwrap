@@ -21,8 +21,6 @@ import Data.Sequence              qualified as Seq
 import Data.String                (fromString)
 import Data.Void                  (Void)
 import System.Console.ANSI        qualified as ANSI
-import System.IO                  (Handle)
-
 import Text.Megaparsec            (Parsec, choice, eof, optional, some)
 import Text.Megaparsec.Byte       (printChar, tab)
 import Text.Printf                (printf)
@@ -49,7 +47,8 @@ autoCompleteP = do
       maybe dropNonPrintableChar (pure . Just . Completion . foldMap BS.singleton) mresult
     _ -> pure Nothing
 
-eraseAndWrite :: (Members '[HandleAct] effs) => Handle -> Int -> ByteString -> Eff effs ()
+eraseAndWrite
+  :: (Members '[HandleAct] effs) => ViwrapHandle 'FileHandle -> Int -> ByteString -> Eff effs ()
 eraseAndWrite h n content = hWrite h $ mconcat [BS.replicate n 127, content]
 
 addHook :: (Members '[State ViwrapState , Logger] effs) => VIHook -> Eff effs ()
@@ -61,7 +60,7 @@ addHook hook = do
 removeHook :: (Members '[State ViwrapState] effs) => Eff effs ()
 removeHook = modify (viHooks %~ Seq.drop 1)
 
-timeoutAndRemove :: (ViwrapEff effs) => Eff effs () -> Eff effs ()
+timeoutAndRemove :: Eff ViwrapStack () -> Eff ViwrapStack ()
 timeoutAndRemove runHook = do
   content <- _prevMasterContent <$> get
   if content == mempty then removeHook else runHook

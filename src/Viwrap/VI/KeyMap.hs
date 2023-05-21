@@ -19,7 +19,7 @@ import Viwrap.VI
 import Viwrap.VI.Handler
 
 
-type KeyMap effs = ViwrapEff effs => Map (VIMode, Word8) (Eff effs ())
+type KeyMap effs = Map (VIMode, Word8) (Eff ViwrapStack ())
 
 defKeyMap :: KeyMap effs
 defKeyMap = Map.mapKeys (fmap BS.c2w) $ Map.fromList
@@ -44,7 +44,7 @@ defKeyMap = Map.mapKeys (fmap BS.c2w) $ Map.fromList
   ]
 
 
-keyAction :: (ViwrapEff effs) => KeyMap effs -> VIMode -> Word8 -> Eff effs ()
+keyAction :: KeyMap ViwrapStack -> VIMode -> Word8 -> Eff ViwrapStack ()
 keyAction keymap mode key = do
   case Map.lookup (mode, key) keymap of
     Just eff -> eff

@@ -1,6 +1,11 @@
 module Viwrap.Pty.Utils
   ( fdCloseIO
   , forkAndExecCmdIO
+  , getMasterPty
+  , getSlavePty
+  , getStderr
+  , getStdin
+  , getStdout
   , getTerminalAttrIO
   , hGetCursorPosition
   , installTerminalModes
@@ -109,16 +114,24 @@ fdCloseIO fd = logPty ["FdClose"] (printf "closing fd: %s" $ show fd) >> sendM (
 forkAndExecCmdIO
   :: (Members '[Logger , Reader Env] effs, LastMember IO effs) => Eff effs (ProcessHandle, Pid)
 forkAndExecCmdIO = do
-  Env { _envCmd, _envCmdArgs, _slavePty = (_, sHandle) } <- ask
+
+  hSlave <-
+    (\case
+        SlavePty h -> h
+        handle     -> error (printf "Unexpected handle %s expected SlavePty" $ show handle)
+      )
+      <$> getSlavePty
+
+  Env { _envCmd, _envCmdArgs } <- ask
 
   logPty ["ForkAndExecCmd"] $ printf "starting process by executing %s cmd" _envCmd
 
   (_, _, _, ph) <-
     sendM $ Process.createProcess_ "slave process" $ (Process.proc _envCmd _envCmdArgs)
       { delegate_ctlc = False
-      , std_err       = UseHandle sHandle
-      , std_out       = UseHandle sHandle
-      , std_in        = UseHandle sHandle
+      , std_err       = UseHandle hSlave
+      , std_out       = UseHandle hSlave
+      , std_in        = UseHandle hSlave
       , new_session   = True
       }
 
@@ -149,6 +162,21 @@ setTerminalAttrIO fd termAttr termState = do
   sendM (Terminal.setTerminalAttributes fd termAttr termState)
 
 
+getStdin :: (Members '[Reader Env] effs) => Eff effs (ViwrapHandle 'FileHandle)
+getStdin = _hStdIn . _viwrapHandles <$> ask
+
+getStdout :: (Members '[Reader Env] effs) => Eff effs (ViwrapHandle 'FileHandle)
+getStdout = _hStdOut . _viwrapHandles <$> ask
+
+getStderr :: (Members '[Reader Env] effs) => Eff effs (ViwrapHandle 'FileHandle)
+getStderr = _hStdErr . _viwrapHandles <$> ask
+
+getMasterPty :: (Members '[Reader Env] effs) => Eff effs (ViwrapHandle 'FileHandle)
+getMasterPty = snd . _masterPty . _viwrapHandles <$> ask
+
+getSlavePty :: (Members '[Reader Env] effs) => Eff effs (ViwrapHandle 'FileHandle)
+getSlavePty = snd . _slavePty . _viwrapHandles <$> ask
+
 writeStdout :: (Members '[Reader Env , HandleAct] effs) => ByteString -> Eff effs ()
 writeStdout content = do
   stdout <- getStdout
@@ -156,7 +184,7 @@ writeStdout content = do
 
 writeMaster :: (Members '[Reader Env , HandleAct] effs) => ByteString -> Eff effs ()
 writeMaster content = do
-  hmaster <- snd . _masterPty <$> ask
+  hmaster <- getMasterPty
   hWrite hmaster content
 
 hGetCursorPosition
