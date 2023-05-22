@@ -27,12 +27,13 @@ defKeyMap = Map.mapKeys (fmap BS.c2w) $ Map.fromList
   , ((Normal, 'A')   , moveToEnd >> toInsertMode)
   , ((Normal, 'I')   , moveToBeginning >> toInsertMode)
   -- , ((Normal, 99), writeMaster @fd $ mconcat [BS.singleton 3])
-  , ((Normal, 'd')   , void backspace)
   , ((Normal, 'h')   , void $ moveLeft 1)
   , ((Normal, 'i')   , toInsertMode)
   , ((Normal, 'l')   , void $ moveRight 1)
   , ((Normal, 'k')   , moveToPrevLine)
   , ((Normal, 'j')   , moveToNextLine)
+  , ((Normal, 'w')   , moveToNextWord)
+  , ((Normal, 'b')   , moveToPrevWord)
 
        -- Insert Mode KeyMap
   , ((Insert, '\f'), insertNoUpdate $ BS.singleton $ BS.c2w '\f')
@@ -40,7 +41,7 @@ defKeyMap = Map.mapKeys (fmap BS.c2w) $ Map.fromList
   , ((Insert, '\t')  , handleTab)
   , ((Insert, '\n')  , handleNewline)
   , ((Insert, '\ESC'), toNormalMode)
-  , ((Insert, '\DEL'), backspace)
+  , ((Insert, '\DEL'), backspace 1)
   ]
 
 

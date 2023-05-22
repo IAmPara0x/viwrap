@@ -13,6 +13,8 @@ module Viwrap.VI.Handler
   , moveToPrevLine
   , toInsertMode
   , toNormalMode
+  , moveToNextWord
+  , moveToPrevWord
   ) where
 
 import Control.Monad              (unless, void, when)
@@ -22,9 +24,12 @@ import Control.Monad.Freer.State  (get, modify)
 
 import Data.ByteString            (ByteString)
 import Data.ByteString            qualified as BS
+import Data.ByteString.Internal   qualified as BS
+import Data.Char                  qualified as Char
 import Data.Sequence              (Seq (..))
 import Data.Sequence              qualified as Seq
 import Data.String                (fromString)
+import Data.Word (Word8)
 
 import Lens.Micro                 ((%~), (.~), (^.))
 
@@ -147,8 +152,8 @@ moveRight n = do
       modify (viState . currentLine %~ forwardZipper n)
       logVI logLabels . show . (^. currentLine) . _viState =<< get
 
-backspace :: Eff ViwrapStack ()
-backspace = do
+backspace :: Int -> Eff ViwrapStack ()
+backspace n = do
 
   VIState {..} <- _viState <$> get
 
@@ -161,7 +166,7 @@ backspace = do
         emptyCrumbs
         do
           hmaster <- getMasterPty
-          eraseAndWrite hmaster (movePos + 1) (_zipperFocus _currentLine)
+          eraseAndWrite hmaster (movePos + n) (_zipperFocus _currentLine)
           writeStdout (fromString ANSI.hideCursorCode)
           moveCursor (Forward movePos)
 
@@ -171,7 +176,7 @@ backspace = do
 
       Env { _envPollingRate = pollingRate } <- ask
 
-      modify (viState . currentLine %~ deleteZipper)
+      modify (viState . currentLine %~ deleteZipper n)
       addHook SyncCursor
       modify (currentPollRate .~ div pollingRate 2)
       logVI logLabels . show . (^. currentLine) . _viState =<< get
@@ -209,7 +214,7 @@ handleNewline = do
           modify (viState . prevLines %~ forwardZipper (Seq.length $ _zipperFocus _prevLines))
 
           -- remove the current line that was added when we insert into the insert mode
-          modify (viState . prevLines %~ deleteZipper)
+          modify (viState . prevLines %~ deleteZipper 1)
 
       logVI ["handleNewline"] "Received '\\n' setting the VI line to initial state"
 
@@ -357,6 +362,33 @@ handleTabPressed = timeoutAndRemove do
       removeHook
       modify (viState . currentLine %~ insertZipper content)
 
+-- TODO: Move this function somewhere else
+nextWordPos :: ByteString -> Int
+nextWordPos = fst . uncurry (dropcount (not . isAlphaNum))
+                  . dropcount isAlphaNum 0
+  where
+    isAlphaNum :: Word8 -> Bool
+    isAlphaNum = Char.isAlphaNum . BS.w2c
+    
+    dropcount :: (Word8 -> Bool) -> Int -> ByteString -> (Int,ByteString)
+    dropcount predicate n str
+      | BS.null str = (n,mempty)
+      | predicate $ BS.head str = dropcount predicate (n + 1) $ BS.tail str
+      | otherwise = (n,str)
+
+moveToNextWord :: Eff ViwrapStack ()
+moveToNextWord = do
+  VIState{..} <- _viState <$> get
+  moveRight (nextWordPos $ _zipperFocus _currentLine)
+
+moveToPrevWord :: Eff ViwrapStack ()
+moveToPrevWord = do
+  VIState{..} <- _viState <$> get
+  moveLeft $ nextWordPos (_zipperCrumbs _currentLine) + 1
+
+-- deleteWord :: Eff ViwrapStack ()
+-- deleteWord = do
+
 
 toInsertMode :: Eff ViwrapStack ()
 toInsertMode = do
@@ -367,7 +399,7 @@ toInsertMode = do
   modify (viState . prevLines %~ forwardZipper (Seq.length $ _zipperFocus _prevLines))
   --
   -- remove the current line that was added when we insert into the insert mode
-  modify (viState . prevLines %~ deleteZipper)
+  modify (viState . prevLines %~ deleteZipper 1)
 
 toNormalMode :: Eff ViwrapStack ()
 toNormalMode = do

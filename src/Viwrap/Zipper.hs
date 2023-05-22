@@ -68,8 +68,8 @@ insertZipper content Zipper {..} = Zipper _zipperFocus (zipperReverse content <>
 appendZipper :: IsZipper a => a -> Zipper a -> Zipper a
 appendZipper content Zipper {..} = Zipper (content <> _zipperFocus) _zipperCrumbs
 
-deleteZipper :: IsZipper a => Zipper a -> Zipper a
-deleteZipper = zipperCrumbs %~ zipperDrop 1
+deleteZipper :: IsZipper a => Int -> Zipper a -> Zipper a
+deleteZipper n = zipperCrumbs %~ zipperDrop n
 
 contentZipper :: IsZipper a => Zipper a -> a
 contentZipper Zipper {..} = zipperReverse _zipperCrumbs <> _zipperFocus
